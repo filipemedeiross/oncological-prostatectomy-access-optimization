@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.25.2"
-app = marimo.App(width="medium")
+app = marimo.App(width="full")
 
 
 @app.cell
@@ -37,8 +37,6 @@ def _(mo):
     - **Output:** only `data/oncology_prostatectomy_2026_first_half.csv`.
 
     > Note 01: Raw files are stored in `.cache/sih_prostatectomy` at the project root.
-
-    > Note 02: Dependencies used: `pysus==2.10.5` (including `pyreaddbc` and `httpx`) and `pandas==2.3.3`. Run the cells in order.
     """)
     return
 
@@ -57,18 +55,16 @@ def _():
     import re
     import httpx
 
+    import pandas as pd
+
     from pathlib               import Path
     from time                  import sleep
-    from IPython.display       import display
     from pyreaddbc             import dbc2dbf
     from pysus.data.dbf_reader import read_dbf_filtered
-    from concurrent.futures    import ThreadPoolExecutor
-    from tempfile              import TemporaryDirectory
 
-    from datetime import datetime, timezone
-    from ftplib   import FTP     , all_errors
-
-    import pandas as pd
+    from ftplib             import FTP, all_errors
+    from concurrent.futures import ThreadPoolExecutor
+    from tempfile           import TemporaryDirectory
 
     return (
         FTP,
@@ -76,16 +72,13 @@ def _():
         TemporaryDirectory,
         ThreadPoolExecutor,
         all_errors,
-        datetime,
         dbc2dbf,
-        display,
         httpx,
         os,
         pd,
         re,
         read_dbf_filtered,
         sleep,
-        timezone,
     )
 
 
@@ -94,7 +87,7 @@ def _(Path, os):
     ROOT = next(
         p
         for p in (Path.cwd(), *Path.cwd().parents)
-        if (p / "notebooks/article_demand_supply").is_dir()
+        if (p / "notebooks/").is_dir()
     )
 
     os.environ["PYSUS_CACHEPATH"] = str(ROOT / ".cache/pysus")
@@ -102,7 +95,7 @@ def _(Path, os):
 
 
 @app.cell
-def _(ROOT, datetime, timezone):
+def _(ROOT):
     COMPETENCIA_LIMITE = "2026-09"
     INICIO             = "2026-01-01"
     FIM                = "2026-06-30"
@@ -114,9 +107,8 @@ def _(ROOT, datetime, timezone):
     DIRETORIO = "/dissemin/publicos/SIHSUS/200801_/Dados"
 
     CACHE = ROOT / ".cache/sih_prostatectomy"
-    CSV   = ROOT / "notebooks/article_demand_supply/data/oncology_prostatectomy_2026_first_half.csv"
+    CSV   = ROOT / "data/oncology_prostatectomy_2026_first_half.csv"
 
-    EXTRACAO = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     CACHE.       mkdir(parents=True, exist_ok=True)
     CSV  .parent.mkdir(parents=True, exist_ok=True)
@@ -125,7 +117,6 @@ def _(ROOT, datetime, timezone):
         COMPETENCIA_LIMITE,
         CSV,
         DIRETORIO,
-        EXTRACAO,
         FIM,
         HOST,
         INICIO,
@@ -189,8 +180,9 @@ def _(COMPETENCIA_LIMITE, DIRETORIO, FTP, HOST, INICIO, UFS, re):
 
 @app.cell
 def _(arquivos, pd):
-    catalogo = pd.DataFrame(
+    initial_catalogo = pd.DataFrame(
         arquivos,
+
         columns=[
             "arquivo"    ,
             "uf"         ,
@@ -200,38 +192,55 @@ def _(arquivos, pd):
         ]
     )
 
-    catalogo.head()
-    return (catalogo,)
+    initial_catalogo.head()
+    return (initial_catalogo,)
 
 
 @app.cell
-def _(FIM, INICIO, UFS, catalogo, pd):
-    if catalogo.empty:
-        raise RuntimeError('Nenhum arquivo RD disponível no período solicitado.')
-    catalogo_1 = catalogo.sort_values(['competencia', 'uf']).reset_index(drop=True)
-    semestre = pd.period_range(INICIO, FIM, freq='M').astype(str)
-    cobertura = pd.crosstab(catalogo_1['competencia'], catalogo_1['uf']).reindex(columns=UFS, fill_value=0)
-    faltantes = cobertura.reindex(semestre, fill_value=0).eq(0).stack()
+def _(FIM, INICIO, UFS, initial_catalogo, pd):
+    catalogo = initial_catalogo.sort_values(
+        [
+            "competencia",
+            "uf"         ,
+        ]
+    ).reset_index(drop=True)
+
+
+    semestre  = pd.period_range(
+        INICIO,
+        FIM   ,
+
+        freq="M",
+    ).astype(str)
+
+    cobertura = pd.crosstab(
+        catalogo["competencia"],
+        catalogo["uf"         ],
+    ).reindex(columns=UFS, fill_value=0)
+
+    faltantes = cobertura.reindex(
+        semestre, fill_value=0
+    ).eq(0).stack()
+
     if faltantes.any():
-        raise RuntimeError(f'UF/competência ausente no semestre: {faltantes[faltantes].index.tolist()}')
-    return catalogo_1, cobertura
+        raise RuntimeError(f"UF/competência ausente no semestre: {faltantes[faltantes].index.tolist()}")
+    return catalogo, cobertura
 
 
 @app.cell
-def _(EXTRACAO, catalogo_1):
-    print(f'Consulta ({EXTRACAO}):')
-    print()
-    print(f'{len(catalogo_1)} arquivos')
-    print(f'{catalogo_1.competencia.max()} última competência')
+def _(catalogo):
+    print(f'{len(catalogo)} arquivos (última competência em {catalogo.competencia.max()})')
     return
 
 
 @app.cell
-def _(cobertura, display, pd):
-    display(pd.DataFrame({
-        "arquivos"     : cobertura.sum  (axis=1                                                   ),
-        "ufs_ausentes" : cobertura.apply(lambda linha: ", ".join(linha.index[linha.eq(0)]), axis=1),
-    }))
+def _(cobertura, pd):
+    pd.DataFrame({
+        "arquivos"     : cobertura.sum  (axis=1),
+        "ufs_ausentes" : cobertura.apply(
+            lambda linha: ", ".join(linha.index[linha.eq(0)]), axis=1
+        ),
+    })
     return
 
 
@@ -299,6 +308,7 @@ def _(
                             ftp.retrbinary(
                                 f"RETR {item.arquivo}",
                                 destino.write         ,
+
                                 blocksize=262144,
                             )
 
@@ -340,14 +350,26 @@ def _(
 
 
 @app.cell
-def _(ThreadPoolExecutor, catalogo_1, extrair, pd):
+def _(ThreadPoolExecutor, catalogo, extrair, pd):
     partes = []
+
     with ThreadPoolExecutor(max_workers=4) as executor:
-        for i, parte in enumerate(executor.map(extrair, catalogo_1.itertuples(index=False)), 1):
+        for i, parte in enumerate(
+            executor.map(
+                extrair                         ,
+                catalogo.itertuples(index=False),
+            ),
+            1,
+        ):
             partes.append(parte)
-            if i % 27 == 0 or i == len(catalogo_1):
-                print(f'{i}/{len(catalogo_1)} arquivos processados')
+
+            if i % 27 == 0 or i == len(catalogo):
+                print(f'{i}/{len(catalogo)} arquivos processados')
+
+
     brutos = pd.concat(partes, ignore_index=True).astype('string')
+
+
     print()
     print(f'{len(brutos):,} registros do procedimento antes do filtro por internação.')
     return (brutos,)
@@ -370,75 +392,130 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    Invalid dates or missing identifiers interrupt execution. The original six-digit municipality codes are preserved; municipality names and seven-digit IBGE codes are obtained from the official reference table. Municipalities with no matching entry remain in the CSV with empty derived fields and are counted in the analysis.
+    Invalid dates or missing identifiers interrupt execution. The original six-digit municipality codes are used internally to obtain municipality names and seven-digit IBGE codes from the official reference table. Municipalities with no matching entry remain in the CSV with empty derived fields and are counted in the analysis.
     """)
     return
 
 
 @app.cell
 def _(brutos):
-    dados = brutos.loc[brutos["IDENT"].eq("1")].copy()
+    initial_dados = brutos.loc[brutos["IDENT"].eq("1")].copy()
 
-    if dados.empty:
+    if initial_dados.empty:
         raise RuntimeError("Nenhuma AIH normal encontrada para o procedimento.")
 
     if not (
-        dados["N_AIH"].str.fullmatch(r"\d{13}").fillna(False).all() and
-        dados["CNES" ].str.fullmatch(r"\d{7}" ).fillna(False).all()
+        initial_dados["N_AIH"].str.fullmatch(r"\d{13}").fillna(False).all() and
+        initial_dados["CNES" ].str.fullmatch(r"\d{7}" ).fillna(False).all()
     ):
         raise ValueError("AIH ou CNES inválido; revisar antes de consolidar registros.")
-    return (dados,)
+    return (initial_dados,)
 
 
 @app.cell
-def _(dados):
-    n_antes = len(dados)
-    dados['competencia'] = dados['ANO_CMPT'] + '-' + dados['MES_CMPT'].str.zfill(2)
-    dados_1 = dados.sort_values(['competencia', 'atualizacao_arquivo', 'arquivo_origem']).drop_duplicates(['N_AIH', 'CNES'], keep='last')
-    n_repetidos = n_antes - len(dados_1)
-    return dados_1, n_antes, n_repetidos
+def _(initial_dados):
+    n_antes = len(initial_dados)
+
+    initial_dados['competencia'] = (
+        initial_dados['ANO_CMPT'] + '-' + initial_dados['MES_CMPT'].str.zfill(2)
+    )
+
+    dados = initial_dados.sort_values(
+        [
+            'competencia'        ,
+            'atualizacao_arquivo',
+            'arquivo_origem'     ,
+        ]
+    ).drop_duplicates(['N_AIH', 'CNES'], keep='last')
+
+    n_repetidos = n_antes - len(dados)
+    return dados, n_antes, n_repetidos
 
 
 @app.cell
-def _(FIM, INICIO, brutos, dados_1, n_antes, n_repetidos, pd):
-    for _origem, _destino in [('DT_INTER', 'data_internacao'), ('DT_SAIDA', 'data_saida')]:
-        dados_1[_destino] = pd.to_datetime(dados_1[_origem], format='%Y%m%d', errors='raise')
-    if dados_1[['data_internacao', 'data_saida']].isna().any().any():
+def _(FIM, INICIO, brutos, dados, n_antes, n_repetidos, pd):
+    for _origem, _destino in [
+        ('DT_INTER', 'data_internacao'),
+        ('DT_SAIDA', 'data_saida'     ),
+    ]:
+        dados[_destino] = pd.to_datetime(dados[_origem], format='%Y%m%d', errors='raise')
+
+    if dados[['data_internacao', 'data_saida']].isna().any().any():
         raise ValueError('Data ausente; revisar antes de selecionar o semestre.')
-    if dados_1['data_saida'].lt(dados_1['data_internacao']).any():
+
+    if dados['data_saida'].lt(dados['data_internacao']).any():
         raise ValueError('Saída anterior à internação.')
-    no_semestre = dados_1['data_internacao'].between(INICIO, FIM)
+
+    no_semestre = dados['data_internacao'].between(INICIO, FIM)
+
     print(f'AIHs não normais = {len(brutos) - n_antes}')
-    print(f'Reapresentações  = {n_repetidos}')
-    print(f'Fora do semestre = {(~no_semestre).sum()}')
+    print(f'Reapresentações  = {n_repetidos          }')
+    print(f'Fora do semestre = {(~no_semestre).sum() }')
     return (no_semestre,)
 
 
 @app.cell
-def _(dados_1, no_semestre):
-    dados_2 = dados_1.loc[no_semestre].copy()
-    if dados_2.empty:
+def _(dados, no_semestre):
+    dados.drop(index=dados.index[~no_semestre], inplace=True)
+
+    if dados.empty:
         raise RuntimeError('Nenhuma internação no semestre solicitado.')
-    dados_2.head()
-    return (dados_2,)
+
+    dados.head()
+    return
 
 
 @app.cell
-def _(EXTRACAO, dados_2, httpx, pd):
-    resposta = httpx.get('https://servicodados.ibge.gov.br/api/v1/localidades/municipios', timeout=60)
+def _(dados, httpx, pd):
+    resposta = httpx.get(
+        'https://servicodados.ibge.gov.br/api/v1/localidades/municipios', timeout=60
+    )
+
     resposta.raise_for_status()
-    municipios = pd.DataFrame(resposta.json())[['id', 'nome']]
+
+
+    municipios = pd.DataFrame(
+        resposta.json()
+    )[['id', 'nome']]
+
     municipios['codigo_ibge'] = municipios['id'].astype('string')
-    municipios = municipios.set_index(municipios['codigo_ibge'].str[:6], verify_integrity=True)
-    for _origem, _destino in [('MUNIC_RES', 'residencia'), ('MUNIC_MOV', 'realizacao')]:
-        dados_2[f'codigo_municipio_{_destino}'] = dados_2[_origem]
-        dados_2[f'codigo_ibge_{_destino}'] = dados_2[_origem].map(municipios['codigo_ibge'])
-        dados_2[f'municipio_{_destino}'] = dados_2[_origem].map(municipios['nome'])
-    dados_3 = dados_2.rename(columns={'N_AIH': 'numero_aih', 'CNES': 'cnes', 'PROC_REA': 'codigo_procedimento'})
-    dados_3['extracao_utc'] = EXTRACAO
-    dados_3 = dados_3[['numero_aih', 'cnes', 'codigo_procedimento', 'data_internacao', 'data_saida', 'competencia', 'codigo_municipio_residencia', 'codigo_ibge_residencia', 'municipio_residencia', 'codigo_municipio_realizacao', 'codigo_ibge_realizacao', 'municipio_realizacao', 'arquivo_origem', 'atualizacao_arquivo', 'extracao_utc']].sort_values(['data_internacao', 'numero_aih', 'cnes']).reset_index(drop=True)
-    dados_3.head()
-    return (dados_3,)
+    municipios                = municipios.set_index   (
+        municipios['codigo_ibge'].str[:6], verify_integrity=True
+    )
+
+    for _origem, _destino in [
+        ('MUNIC_RES', 'residencia'),
+        ('MUNIC_MOV', 'realizacao'),
+    ]:
+        dados[f'codigo_ibge_{_destino}'] = dados[_origem].map(municipios['codigo_ibge'])
+        dados[f'municipio_{_destino}'  ] = dados[_origem].map(municipios['nome'       ])
+
+
+    consolidated = dados.rename(
+        columns={
+            'N_AIH'    : 'numero_aih'         ,
+            'CNES'     : 'cnes'               ,
+            'PROC_REA' : 'codigo_procedimento',
+        }
+    )
+
+    consolidated = consolidated[
+        [
+            'numero_aih'            ,
+            'cnes'                  ,
+            'codigo_procedimento'   ,
+            'data_internacao'       ,
+            'data_saida'            ,
+            'competencia'           ,
+            'codigo_ibge_residencia',
+            'municipio_residencia'  ,
+            'codigo_ibge_realizacao',
+            'municipio_realizacao'  ,
+        ]
+    ].sort_values(['data_internacao', 'numero_aih', 'cnes']).reset_index(drop=True)
+
+    consolidated.head()
+    return (consolidated,)
 
 
 @app.cell(hide_code=True)
@@ -452,17 +529,27 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    Dates are stored in ISO format (`YYYY-MM-DD`), using UTF-8 encoding with BOM, and codes are preserved as text in the DataFrame. When reopening the CSV, use `dtype="string"` to preserve leading zeros in codes. `atualizacao_arquivo` stores the FTP MDTM timestamp (`YYYYMMDDhhmmss`, UTC), while `extracao_utc` identifies the current extraction run.
+    Dates are stored in ISO format (`YYYY-MM-DD`), using UTF-8 encoding with BOM, and codes are preserved as text in the DataFrame. When reopening the CSV, use `dtype="string"` to preserve leading zeros in codes.
     """)
     return
 
 
 @app.cell
-def _(CSV, dados_3):
+def _(CSV, consolidated):
     temporario_csv = CSV.with_suffix('.tmp')
-    dados_3.to_csv(temporario_csv, index=False, encoding='utf-8-sig', date_format='%Y-%m-%d')
+
+    consolidated.to_csv(
+        temporario_csv,
+
+        index      =False      ,
+        encoding   ='utf-8-sig',
+        date_format='%Y-%m-%d' ,
+    )
+
     temporario_csv.replace(CSV)
-    print(f'{len(dados_3):,} internações salvas em {CSV}')
+
+
+    print(f'{len(consolidated):,} internações salvas em {CSV}')
     return
 
 
@@ -485,25 +572,52 @@ def _(mo):
 
 
 @app.cell
-def _(dados_3):
-    pares = dados_3.dropna(subset=['codigo_ibge_residencia', 'codigo_ibge_realizacao'])
-    fora_municipio = pares['codigo_ibge_residencia'].ne(pares['codigo_ibge_realizacao'])
-    fora_uf = pares['codigo_ibge_residencia'].str[:2].ne(pares['codigo_ibge_realizacao'].str[:2])
-    demanda = dados_3.groupby(['codigo_ibge_residencia', 'municipio_residencia']).size().rename('demanda')
-    supply = dados_3.groupby(['codigo_ibge_realizacao', 'municipio_realizacao']).size().rename('supply')
-    mensal = dados_3.groupby(dados_3['data_internacao'].dt.to_period('M')).size()
+def _(consolidated):
+    pares = consolidated.dropna(subset=['codigo_ibge_residencia', 'codigo_ibge_realizacao'])
+
+    fora_municipio = pares['codigo_ibge_residencia']        .ne(pares['codigo_ibge_realizacao']        )
+    fora_uf        = pares['codigo_ibge_residencia'].str[:2].ne(pares['codigo_ibge_realizacao'].str[:2])
+
+    demanda = consolidated.groupby(['codigo_ibge_residencia', 'municipio_residencia']).size().rename('demanda')
+    supply  = consolidated.groupby(['codigo_ibge_realizacao', 'municipio_realizacao']).size().rename('supply' )
+
+    mensal  = consolidated.groupby(consolidated['data_internacao'].dt.to_period('M')).size()
     return demanda, fora_municipio, fora_uf, mensal, pares, supply
 
 
 @app.cell
-def _(dados_3, demanda, display, pares, pd, supply):
-    display(pd.Series({'Internações (AIHs)': len(dados_3), 'Municípios de residência': len(demanda), 'Municípios de realização': len(supply), 'Hospitais (CNES)': dados_3['cnes'].nunique(), 'Residência sem correspondência IBGE': dados_3['codigo_ibge_residencia'].isna().sum(), 'Realização sem correspondência IBGE': dados_3['codigo_ibge_realizacao'].isna().sum(), 'Pares de municípios identificados': len(pares)}, name='valor').to_frame())
+def _(consolidated, demanda, pares, pd, supply):
+    pd.Series(
+        {
+            'Internações (AIHs)' : len(consolidated),
+
+            'Municípios de residência' : len(demanda),
+            'Municípios de realização' : len(supply ),
+            'Hospitais (CNES)'         : consolidated['cnes'].nunique(),
+
+            'Residência sem correspondência IBGE' : consolidated['codigo_ibge_residencia'].isna().sum(),
+            'Realização sem correspondência IBGE' : consolidated['codigo_ibge_realizacao'].isna().sum(),
+
+            'Pares de municípios identificados' : len(pares),
+        },
+
+        name='valor'
+    ).to_frame()
     return
 
 
 @app.cell
-def _(dados_3, display, fora_municipio, fora_uf, pd):
-    display(pd.Series({'Atendimento fora do município (%)': 100 * fora_municipio.mean(), 'Atendimento fora da UF (%)': 100 * fora_uf.mean(), 'Permanência mediana (dias)': (dados_3['data_saida'] - dados_3['data_internacao']).dt.days.median()}, name='valor').round(2).to_frame())
+def _(consolidated, fora_municipio, fora_uf, pd):
+    pd.Series(
+        {
+            'Atendimento fora do município (%)' : 100 * fora_municipio.mean(),
+            'Atendimento fora da UF (%)'        : 100 * fora_uf       .mean(),
+
+            'Permanência mediana (dias)' : (consolidated['data_saida'] - consolidated['data_internacao']).dt.days.median(),
+        },
+
+        name='valor'
+    ).round(2).to_frame()
     return
 
 
@@ -511,10 +625,12 @@ def _(dados_3, display, fora_municipio, fora_uf, pd):
 def _(FIM, INICIO, mensal, pd):
     mensal.reindex(
         pd.period_range(
-            INICIO  ,
-            FIM     ,
+            INICIO,
+            FIM   ,
+
             freq="M",
         ),
+
         fill_value=0,
     ).rename_axis("mes_internacao").to_frame("internacoes")
     return
