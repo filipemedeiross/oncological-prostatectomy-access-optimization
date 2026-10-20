@@ -1,0 +1,8 @@
+[project]
+name = "oncological-prostatectomy-access-optimization"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "marimo>=0.25.2",
+    "pysus>=2.11.7",
+]
