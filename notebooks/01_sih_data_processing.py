@@ -34,17 +34,9 @@ def _(mo):
 
     - **Unit of analysis:** AIH, not unique patients;
 
-    - **Output:** only `data/oncology_prostatectomy_2026_first_half.csv`.
+    - **Outputs:** `data/oncology_prostatectomy_2026_first_half.csv` and the HTML report `reports/sih_data_processing.html`.
 
     > Note 01: Raw files are stored in `.cache/sih_prostatectomy` at the project root.
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## PARAMETERS
     """)
     return
 
@@ -60,6 +52,7 @@ def _():
     from pathlib               import Path
     from time                  import sleep
     from pyreaddbc             import dbc2dbf
+    from datetime              import datetime
     from pysus.data.dbf_reader import read_dbf_filtered
 
     from ftplib             import FTP, all_errors
@@ -72,6 +65,7 @@ def _():
         TemporaryDirectory,
         ThreadPoolExecutor,
         all_errors,
+        datetime,
         dbc2dbf,
         httpx,
         os,
@@ -127,7 +121,7 @@ def _(ROOT):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
+    mo.md("""
     ## AVAILABLE FILES AND COVERAGE
     """)
     return
@@ -135,7 +129,7 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
+    mo.md("""
     Availability is checked against the official FTP repository, including for Brazilian states (UFs) with no occurrences of the procedure. Execution is interrupted if any state/processing period within the semester is missing or if a download fails. Later processing periods may have partial coverage, as indicated in the table.
     """)
     return
@@ -179,7 +173,7 @@ def _(COMPETENCIA_LIMITE, DIRETORIO, FTP, HOST, INICIO, UFS, re):
 
 
 @app.cell
-def _(arquivos, pd):
+def _(FIM, INICIO, UFS, arquivos, pd):
     initial_catalogo = pd.DataFrame(
         arquivos,
 
@@ -192,12 +186,6 @@ def _(arquivos, pd):
         ]
     )
 
-    initial_catalogo.head()
-    return (initial_catalogo,)
-
-
-@app.cell
-def _(FIM, INICIO, UFS, initial_catalogo, pd):
     catalogo = initial_catalogo.sort_values(
         [
             "competencia",
@@ -222,31 +210,48 @@ def _(FIM, INICIO, UFS, initial_catalogo, pd):
         semestre, fill_value=0
     ).eq(0).stack()
 
+
     if faltantes.any():
         raise RuntimeError(f"UF/competência ausente no semestre: {faltantes[faltantes].index.tolist()}")
     return catalogo, cobertura
 
 
 @app.cell
-def _(catalogo):
-    print(f'{len(catalogo)} arquivos (última competência em {catalogo.competencia.max()})')
+def _(catalogo, datetime, mo):
+    mo.md(f"""
+    Resumo da consulta — SIH/SUS
+
+    | Indicador | Valor |
+    |:---|---:|
+    | Arquivos encontrados | **{len(catalogo):,}** |
+    | Última competência disponível | **{catalogo.competencia.max()}** |
+    | Consulta realizada em | {datetime.now():%d/%m/%Y às %H:%M} |
+    """)
     return
 
 
 @app.cell
-def _(cobertura, pd):
-    pd.DataFrame({
+def _(cobertura, mo, pd):
+    _resumo_cobertura = pd.DataFrame({
         "arquivos"     : cobertura.sum  (axis=1),
         "ufs_ausentes" : cobertura.apply(
             lambda linha: ", ".join(linha.index[linha.eq(0)]), axis=1
         ),
-    })
+    }).rename_axis("competencia").reset_index()
+
+    mo.ui.table(
+        _resumo_cobertura,
+
+        selection =None ,
+        pagination=False,
+        label     ="Coverage by processing period",
+    )
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
+    mo.md("""
     ## EXTRACTION
     """)
     return
@@ -254,7 +259,7 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
+    mo.md("""
     Four simultaneous downloads are performed. Each DBC file is identified by its last-updated timestamp on the FTP server, downloaded only once, and filtered before the columns are materialized. The temporary DBF file is discarded after the read operation is completed.
     """)
     return
@@ -350,7 +355,7 @@ def _(
 
 
 @app.cell
-def _(ThreadPoolExecutor, catalogo, extrair, pd):
+def _(ThreadPoolExecutor, catalogo, extrair, mo, pd):
     partes = []
 
     with ThreadPoolExecutor(max_workers=4) as executor:
@@ -370,15 +375,9 @@ def _(ThreadPoolExecutor, catalogo, extrair, pd):
     brutos = pd.concat(partes, ignore_index=True).astype('string')
 
 
-    print()
-    print(f'{len(brutos):,} registros do procedimento antes do filtro por internação.')
+    with mo.redirect_stdout():
+        print(f'{len(brutos):,} registros do procedimento antes do filtro por internação.')
     return (brutos,)
-
-
-@app.cell
-def _(brutos):
-    brutos.head()
-    return
 
 
 @app.cell(hide_code=True)
@@ -391,7 +390,7 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
+    mo.md("""
     Invalid dates or missing identifiers interrupt execution. The original six-digit municipality codes are used internally to obtain municipality names and seven-digit IBGE codes from the official reference table. Municipalities with no matching entry remain in the CSV with empty derived fields and are counted in the analysis.
     """)
     return
@@ -433,7 +432,7 @@ def _(initial_dados):
 
 
 @app.cell
-def _(FIM, INICIO, brutos, dados, n_antes, n_repetidos, pd):
+def _(FIM, INICIO, brutos, dados, mo, n_antes, n_repetidos, pd):
     for _origem, _destino in [
         ('DT_INTER', 'data_internacao'),
         ('DT_SAIDA', 'data_saida'     ),
@@ -448,9 +447,10 @@ def _(FIM, INICIO, brutos, dados, n_antes, n_repetidos, pd):
 
     no_semestre = dados['data_internacao'].between(INICIO, FIM)
 
-    print(f'AIHs não normais = {len(brutos) - n_antes}')
-    print(f'Reapresentações  = {n_repetidos          }')
-    print(f'Fora do semestre = {(~no_semestre).sum() }')
+    with mo.redirect_stdout():
+        print(f'AIHs não normais = {len(brutos) - n_antes}')
+        print(f'Reapresentações  = {n_repetidos          }')
+        print(f'Fora do semestre = {(~no_semestre).sum() }')
     return (no_semestre,)
 
 
@@ -458,10 +458,10 @@ def _(FIM, INICIO, brutos, dados, n_antes, n_repetidos, pd):
 def _(dados, no_semestre):
     dados.drop(index=dados.index[~no_semestre], inplace=True)
 
+    dados.head()
+
     if dados.empty:
         raise RuntimeError('Nenhuma internação no semestre solicitado.')
-
-    dados.head()
     return
 
 
@@ -514,6 +514,7 @@ def _(dados, httpx, pd):
         ]
     ].sort_values(['data_internacao', 'numero_aih', 'cnes']).reset_index(drop=True)
 
+
     consolidated.head()
     return (consolidated,)
 
@@ -528,14 +529,14 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
+    mo.md("""
     Dates are stored in ISO format (`YYYY-MM-DD`), using UTF-8 encoding with BOM, and codes are preserved as text in the DataFrame. When reopening the CSV, use `dtype="string"` to preserve leading zeros in codes.
     """)
     return
 
 
 @app.cell
-def _(CSV, consolidated):
+def _(CSV, consolidated, mo):
     temporario_csv = CSV.with_suffix('.tmp')
 
     consolidated.to_csv(
@@ -549,7 +550,8 @@ def _(CSV, consolidated):
     temporario_csv.replace(CSV)
 
 
-    print(f'{len(consolidated):,} internações salvas em {CSV}')
+    with mo.redirect_stdout():
+        print(f'{len(consolidated):,} internações salvas em {CSV}')
     return
 
 
@@ -586,8 +588,8 @@ def _(consolidated):
 
 
 @app.cell
-def _(consolidated, demanda, pares, pd, supply):
-    pd.Series(
+def _(consolidated, demanda, mo, pares, pd, supply):
+    _resumo = pd.Series(
         {
             'Internações (AIHs)' : len(consolidated),
 
@@ -602,13 +604,22 @@ def _(consolidated, demanda, pares, pd, supply):
         },
 
         name='valor'
-    ).to_frame()
+    ).rename_axis('indicador').reset_index()
+
+
+    mo.ui.table(
+        _resumo,
+
+        selection =None ,
+        pagination=False,
+        label     ="Hospitalization and municipality counts",
+    )
     return
 
 
 @app.cell
-def _(consolidated, fora_municipio, fora_uf, pd):
-    pd.Series(
+def _(consolidated, fora_municipio, fora_uf, mo, pd):
+    _indicadores = pd.Series(
         {
             'Atendimento fora do município (%)' : 100 * fora_municipio.mean(),
             'Atendimento fora da UF (%)'        : 100 * fora_uf       .mean(),
@@ -617,13 +628,22 @@ def _(consolidated, fora_municipio, fora_uf, pd):
         },
 
         name='valor'
-    ).round(2).to_frame()
+    ).round(2).rename_axis('indicador').reset_index()
+
+
+    mo.ui.table(
+        _indicadores,
+
+        selection =None ,
+        pagination=False,
+        label     ="Travel and length of stay",
+    )
     return
 
 
 @app.cell
-def _(FIM, INICIO, mensal, pd):
-    mensal.reindex(
+def _(FIM, INICIO, mensal, mo, pd):
+    _mensal = mensal.reindex(
         pd.period_range(
             INICIO,
             FIM   ,
@@ -632,19 +652,40 @@ def _(FIM, INICIO, mensal, pd):
         ),
 
         fill_value=0,
-    ).rename_axis("mes_internacao").to_frame("internacoes")
+    ).rename_axis("mes_internacao").to_frame("internacoes").reset_index()
+
+
+    mo.ui.table(
+        _mensal,
+
+        selection =None ,
+        pagination=False,
+        label     ="Hospitalizations by admission month",
+    )
     return
 
 
 @app.cell
-def _(demanda):
-    demanda.nlargest(10).to_frame()
+def _(demanda, mo):
+    mo.ui.table(
+        demanda.nlargest(10).reset_index(),
+
+        selection =None ,
+        pagination=False,
+        label     ="Top 10 municipalities of residence",
+    )
     return
 
 
 @app.cell
-def _(supply):
-    supply.nlargest(10).to_frame()
+def _(mo, supply):
+    mo.ui.table(
+        supply.nlargest(10).reset_index(),
+
+        selection =None ,
+        pagination=False,
+        label     ="Top 10 municipalities performing the procedure",
+    )
     return
 
 
