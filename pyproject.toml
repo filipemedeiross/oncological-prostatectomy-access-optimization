@@ -5,5 +5,6 @@ requires-python = ">=3.13"
 dependencies = [
     "geopandas>=1.2.0",
     "marimo>=0.25.2",
+    "matplotlib>=3.11.2",
     "pysus>=2.11.7",
 ]
