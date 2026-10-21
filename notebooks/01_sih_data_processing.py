@@ -22,21 +22,16 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    Hospitalizations from **01/01/2026 to 06/30/2026**, Brazil. One row per regular AIH and healthcare establishment, including place of residence, place of procedure and dates.
+    Hospitalizations from **01/01/2026 to 06/30/2026**, Brazil. One row per regular AIH and healthcare establishment, including place of residence, place of procedure, and dates.
 
     - **Selection:** main procedure performed `PROC_REA = 0416010121` (oncology prostatectomy) and `IDENT = 1`;
-
     - **Served demand:** count by municipality of residence (`MUNIC_RES`);
-
     - **Observed supply:** count by municipality of the hospital (`MUNIC_MOV`);
-
     - **Reference date:** `DT_INTER`, the hospital admission date;
-
     - **Unit of analysis:** AIH, not unique patients;
+    - **Output:** `data/oncology_prostatectomy_2026_first_half.csv`.
 
-    - **Outputs:** `data/oncology_prostatectomy_2026_first_half.csv` and the HTML report `reports/sih_data_processing.html`.
-
-    > Note 01: Raw files are stored in `.cache/sih_prostatectomy` at the project root.
+    > Note: Raw files are stored in `.cache/sih_prostatectomy` at the project root.
     """)
     return
 
@@ -44,78 +39,71 @@ def _(mo):
 @app.cell
 def _():
     import os
-    import re
-    import httpx
+    import sys
 
     import pandas as pd
 
-    from pathlib               import Path
-    from time                  import sleep
-    from pyreaddbc             import dbc2dbf
-    from datetime              import datetime
-    from pysus.data.dbf_reader import read_dbf_filtered
+    from pathlib  import Path
+    from datetime import datetime
 
-    from ftplib             import FTP, all_errors
-    from concurrent.futures import ThreadPoolExecutor
-    from tempfile           import TemporaryDirectory
-
-    return (
-        FTP,
-        Path,
-        TemporaryDirectory,
-        ThreadPoolExecutor,
-        all_errors,
-        datetime,
-        dbc2dbf,
-        httpx,
-        os,
-        pd,
-        re,
-        read_dbf_filtered,
-        sleep,
-    )
+    return Path, datetime, pd, sys
 
 
 @app.cell
-def _(Path, os):
+def _(Path, sys):
     ROOT = next(
-        p
-        for p in (Path.cwd(), *Path.cwd().parents)
-        if (p / "notebooks/").is_dir()
+        path
+        for path in (Path.cwd(), *Path.cwd().parents)
+        if (path / "notebooks").is_dir()
     )
 
-    os.environ["PYSUS_CACHEPATH"] = str(ROOT / ".cache/pysus")
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
     return (ROOT,)
 
 
 @app.cell
-def _(ROOT):
-    COMPETENCIA_LIMITE = "2026-09"
-    INICIO             = "2026-01-01"
-    FIM                = "2026-06-30"
+def _():
+    from src.datasus import extract_files         , list_files
+    from src.sih     import consolidate_admissions, prepare_catalog, process_admissions
 
-    PROCEDIMENTO = "0416010121"
-    UFS          = "AC AL AM AP BA CE DF ES GO MA MG MS MT PA PB PE PI PR RJ RN RO RR RS SC SE SP TO".split()
-
-    HOST      = "ftp.datasus.gov.br"
-    DIRETORIO = "/dissemin/publicos/SIHSUS/200801_/Dados"
-
-    CACHE = ROOT / ".cache/sih_prostatectomy"
-    CSV   = ROOT / "data/oncology_prostatectomy_2026_first_half.csv"
-
-
-    CACHE.       mkdir(parents=True, exist_ok=True)
-    CSV  .parent.mkdir(parents=True, exist_ok=True)
     return (
-        CACHE,
-        COMPETENCIA_LIMITE,
-        CSV,
-        DIRETORIO,
-        FIM,
-        HOST,
-        INICIO,
-        PROCEDIMENTO,
-        UFS,
+        consolidate_admissions,
+        extract_files,
+        list_files,
+        prepare_catalog,
+        process_admissions,
+    )
+
+
+@app.cell
+def _(ROOT):
+    PROCESSING_PERIOD_CUTOFF = "2026-09"
+    START_DATE               = "2026-01-01"
+    END_DATE                 = "2026-06-30"
+
+    PROCEDURE_CODE = "0416010121"
+
+    STATES = "AC AL AM AP BA CE DF ES GO MA MG MS MT PA PB PE PI PR RJ RN RO RR RS SC SE SP TO".split()
+
+    FTP_HOST      = "ftp.datasus.gov.br"
+    FTP_DIRECTORY = "/dissemin/publicos/SIHSUS/200801_/Dados"
+
+    CACHE_DIR = ROOT / ".cache/sih_prostatectomy"
+    CSV_PATH  = ROOT / "data/oncology_prostatectomy_2026_first_half.csv"
+
+    CACHE_DIR       .mkdir(parents=True, exist_ok=True)
+    CSV_PATH .parent.mkdir(parents=True, exist_ok=True)
+    return (
+        CACHE_DIR,
+        CSV_PATH,
+        END_DATE,
+        FTP_DIRECTORY,
+        FTP_HOST,
+        PROCEDURE_CODE,
+        PROCESSING_PERIOD_CUTOFF,
+        START_DATE,
+        STATES,
     )
 
 
@@ -136,111 +124,55 @@ def _(mo):
 
 
 @app.cell
-def _(COMPETENCIA_LIMITE, DIRETORIO, FTP, HOST, INICIO, UFS, re):
-    arquivos = []
-
-    with FTP(HOST, timeout=60) as ftp:
-        ftp.login()
-        ftp.cwd  (DIRETORIO)
-
-        nomes = sorted(ftp.nlst())
-
-        ftp.voidcmd("TYPE I")
-        for nome in nomes:
-            match = re.fullmatch(
-                r"RD([A-Z]{2})(\d{2})(\d{2})\.dbc", nome, re.I
-            )
-
-            if not match:
-                continue
-
-            uf, ano, mes = match.groups()
-            competencia  = f"20{ano}-{mes}"
-
-            if uf in UFS and INICIO[:7] <= competencia <= COMPETENCIA_LIMITE:
-                atualizado = ftp.sendcmd(f"MDTM {nome}").split()[1]
-
-                arquivos.append(
-                    (
-                        nome          ,
-                        uf            ,
-                        competencia   ,
-                        atualizado    ,
-                        ftp.size(nome),
-                    )
-                )
-    return (arquivos,)
-
-
-@app.cell
-def _(FIM, INICIO, UFS, arquivos, pd):
-    initial_catalogo = pd.DataFrame(
-        arquivos,
-
-        columns=[
-            "arquivo"    ,
-            "uf"         ,
-            "competencia",
-            "atualizado" ,
-            "tamanho"    ,
-        ]
+def _(
+    END_DATE,
+    FTP_DIRECTORY,
+    FTP_HOST,
+    PROCESSING_PERIOD_CUTOFF,
+    START_DATE,
+    STATES,
+    list_files,
+    prepare_catalog,
+):
+    files = list_files(
+        FTP_HOST                ,
+        FTP_DIRECTORY           ,
+        STATES                  ,
+        START_DATE              ,
+        PROCESSING_PERIOD_CUTOFF,
     )
 
-    catalogo = initial_catalogo.sort_values(
-        [
-            "competencia",
-            "uf"         ,
-        ]
-    ).reset_index(drop=True)
-
-
-    semestre  = pd.period_range(
-        INICIO,
-        FIM   ,
-
-        freq="M",
-    ).astype(str)
-
-    cobertura = pd.crosstab(
-        catalogo["competencia"],
-        catalogo["uf"         ],
-    ).reindex(columns=UFS, fill_value=0)
-
-    faltantes = cobertura.reindex(
-        semestre, fill_value=0
-    ).eq(0).stack()
-
-
-    if faltantes.any():
-        raise RuntimeError(f"UF/competência ausente no semestre: {faltantes[faltantes].index.tolist()}")
-    return catalogo, cobertura
+    catalog, coverage = prepare_catalog(files, STATES, START_DATE, END_DATE)
+    return catalog, coverage
 
 
 @app.cell
-def _(catalogo, datetime, mo):
+def _(catalog, datetime, mo):
     mo.md(f"""
-    Resumo da consulta — SIH/SUS
+    **SIH/SUS query summary**
 
-    | Indicador | Valor |
+    | Indicator | Value |
     |:---|---:|
-    | Arquivos encontrados | **{len(catalogo):,}** |
-    | Última competência disponível | **{catalogo.competencia.max()}** |
-    | Consulta realizada em | {datetime.now():%d/%m/%Y às %H:%M} |
+    | Files found | **{len(catalog):,}** |
+    | Latest processing period available | **{catalog.reference_month.max()}** |
+    | Query performed on | {datetime.now():%Y-%m-%d %H:%M} |
     """)
     return
 
 
 @app.cell
-def _(cobertura, mo, pd):
-    _resumo_cobertura = pd.DataFrame({
-        "arquivos"     : cobertura.sum  (axis=1),
-        "ufs_ausentes" : cobertura.apply(
-            lambda linha: ", ".join(linha.index[linha.eq(0)]), axis=1
-        ),
-    }).rename_axis("competencia").reset_index()
+def _(coverage, mo, pd):
+    _coverage_summary = pd.DataFrame(
+        {
+            "file_count"     : coverage.sum  (axis=1),
+            "missing_states" : coverage.apply(
+                lambda row: ", ".join(row.index[row.eq(0)]), axis=1
+            ),
+        }
+    ).rename_axis("reference_month").reset_index()
 
     mo.ui.table(
-        _resumo_cobertura,
+        _coverage_summary,
 
         selection =None ,
         pagination=False,
@@ -267,7 +199,7 @@ def _(mo):
 
 @app.cell
 def _():
-    COLUNAS = [
+    COLUMNS = [
         "N_AIH"    ,
         "CNES"     ,
         "IDENT"    ,
@@ -279,105 +211,32 @@ def _():
         "ANO_CMPT" ,
         "MES_CMPT" ,
     ]
-    return (COLUNAS,)
+    return (COLUMNS,)
 
 
 @app.cell
 def _(
-    CACHE,
-    COLUNAS,
-    DIRETORIO,
-    FTP,
-    HOST,
-    PROCEDIMENTO,
-    Path,
-    TemporaryDirectory,
-    all_errors,
-    dbc2dbf,
-    read_dbf_filtered,
-    sleep,
+    CACHE_DIR,
+    COLUMNS,
+    FTP_DIRECTORY,
+    FTP_HOST,
+    PROCEDURE_CODE,
+    catalog,
+    extract_files,
+    mo,
 ):
-    def extrair(item):
-        dbc = CACHE / f"{Path(item.arquivo).stem}_{item.atualizado}.dbc"
-
-        if not dbc.exists() or dbc.stat().st_size != item.tamanho:
-            for tentativa in range(3):
-                try:
-                    with FTP(HOST, timeout=60) as ftp:
-                        ftp.login()
-                        ftp.cwd  (DIRETORIO)
-
-                        parcial = dbc.with_suffix(".part")
-
-                        with parcial.open("wb") as destino:
-                            ftp.retrbinary(
-                                f"RETR {item.arquivo}",
-                                destino.write         ,
-
-                                blocksize=262144,
-                            )
-
-                    if parcial.stat().st_size != item.tamanho:
-                        raise IOError(f"Download incompleto: {item.arquivo}")
-
-                    parcial.replace(dbc)
-
-                    break
-                except all_errors as erro:
-                    if tentativa == 2:
-                        raise RuntimeError(f"Falha ao baixar {item.arquivo}") from erro
-
-                    sleep(2 ** tentativa)
-
-        with TemporaryDirectory(dir=CACHE) as temporario:
-            dbf = Path(temporario) / "sih.dbf"
-
-            dbc2dbf(str(dbc), str(dbf))
-
-            parte = read_dbf_filtered(
-                dbf       ,
-                "PROC_REA",
-
-                [
-                    PROCEDIMENTO
-                ],
-
-                columns     =COLUNAS,
-                prefix_match=False  ,
-            )
-
-        return parte.assign(
-            arquivo_origem     =item.arquivo   ,
-            atualizacao_arquivo=item.atualizado,
-        )
-
-    return (extrair,)
-
-
-@app.cell
-def _(ThreadPoolExecutor, catalogo, extrair, mo, pd):
-    partes = []
-
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        for i, parte in enumerate(
-            executor.map(
-                extrair                         ,
-                catalogo.itertuples(index=False),
-            ),
-            1,
-        ):
-            partes.append(parte)
-
-            if i % 27 == 0 or i == len(catalogo):
-                print(f'{i}/{len(catalogo)} arquivos processados')
-
-
-    brutos = pd.concat(partes, ignore_index=True).astype('string')
-
+    raw_data = extract_files(
+        catalog       ,
+        CACHE_DIR     ,
+        FTP_HOST      ,
+        FTP_DIRECTORY ,
+        PROCEDURE_CODE,
+        COLUMNS       ,
+    )
 
     with mo.redirect_stdout():
-        print(f'{len(brutos):,} registros do procedimento antes do filtro por internação.')
-    return (brutos,)
+        print(f"{len(raw_data):,} procedure records before admission filtering.")
+    return (raw_data,)
 
 
 @app.cell(hide_code=True)
@@ -397,123 +256,27 @@ def _(mo):
 
 
 @app.cell
-def _(brutos):
-    initial_dados = brutos.loc[brutos["IDENT"].eq("1")].copy()
-
-    if initial_dados.empty:
-        raise RuntimeError("Nenhuma AIH normal encontrada para o procedimento.")
-
-    if not (
-        initial_dados["N_AIH"].str.fullmatch(r"\d{13}").fillna(False).all() and
-        initial_dados["CNES" ].str.fullmatch(r"\d{7}" ).fillna(False).all()
-    ):
-        raise ValueError("AIH ou CNES inválido; revisar antes de consolidar registros.")
-    return (initial_dados,)
-
-
-@app.cell
-def _(initial_dados):
-    n_antes = len(initial_dados)
-
-    initial_dados['competencia'] = (
-        initial_dados['ANO_CMPT'] + '-' + initial_dados['MES_CMPT'].str.zfill(2)
+def _(END_DATE, START_DATE, mo, process_admissions, raw_data):
+    admissions, _initial_count, _duplicate_count, _excluded_count = process_admissions(
+        raw_data, START_DATE, END_DATE
     )
 
-    dados = initial_dados.sort_values(
-        [
-            'competencia'        ,
-            'atualizacao_arquivo',
-            'arquivo_origem'     ,
-        ]
-    ).drop_duplicates(['N_AIH', 'CNES'], keep='last')
-
-    n_repetidos = n_antes - len(dados)
-    return dados, n_antes, n_repetidos
-
-
-@app.cell
-def _(FIM, INICIO, brutos, dados, mo, n_antes, n_repetidos, pd):
-    for _origem, _destino in [
-        ('DT_INTER', 'data_internacao'),
-        ('DT_SAIDA', 'data_saida'     ),
-    ]:
-        dados[_destino] = pd.to_datetime(dados[_origem], format='%Y%m%d', errors='raise')
-
-    if dados[['data_internacao', 'data_saida']].isna().any().any():
-        raise ValueError('Data ausente; revisar antes de selecionar o semestre.')
-
-    if dados['data_saida'].lt(dados['data_internacao']).any():
-        raise ValueError('Saída anterior à internação.')
-
-    no_semestre = dados['data_internacao'].between(INICIO, FIM)
-
     with mo.redirect_stdout():
-        print(f'AIHs não normais = {len(brutos) - n_antes}')
-        print(f'Reapresentações  = {n_repetidos          }')
-        print(f'Fora do semestre = {(~no_semestre).sum() }')
-    return (no_semestre,)
+        print(f"Non-standard AIHs  = {len(raw_data) - _initial_count}")
+        print(f"Resubmissions      = {_duplicate_count}")
+        print(f"Outside the period = {_excluded_count }")
+    return (admissions,)
 
 
 @app.cell
-def _(dados, no_semestre):
-    dados.drop(index=dados.index[~no_semestre], inplace=True)
-
-    dados.head()
-
-    if dados.empty:
-        raise RuntimeError('Nenhuma internação no semestre solicitado.')
+def _(admissions):
+    admissions.head()
     return
 
 
 @app.cell
-def _(dados, httpx, pd):
-    resposta = httpx.get(
-        'https://servicodados.ibge.gov.br/api/v1/localidades/municipios', timeout=60
-    )
-
-    resposta.raise_for_status()
-
-
-    municipios = pd.DataFrame(
-        resposta.json()
-    )[['id', 'nome']]
-
-    municipios['codigo_ibge'] = municipios['id'].astype('string')
-    municipios                = municipios.set_index   (
-        municipios['codigo_ibge'].str[:6], verify_integrity=True
-    )
-
-    for _origem, _destino in [
-        ('MUNIC_RES', 'residencia'),
-        ('MUNIC_MOV', 'realizacao'),
-    ]:
-        dados[f'codigo_ibge_{_destino}'] = dados[_origem].map(municipios['codigo_ibge'])
-        dados[f'municipio_{_destino}'  ] = dados[_origem].map(municipios['nome'       ])
-
-
-    consolidated = dados.rename(
-        columns={
-            'N_AIH'    : 'numero_aih'         ,
-            'CNES'     : 'cnes'               ,
-            'PROC_REA' : 'codigo_procedimento',
-        }
-    )
-
-    consolidated = consolidated[
-        [
-            'numero_aih'            ,
-            'cnes'                  ,
-            'codigo_procedimento'   ,
-            'data_internacao'       ,
-            'data_saida'            ,
-            'competencia'           ,
-            'codigo_ibge_residencia',
-            'municipio_residencia'  ,
-            'codigo_ibge_realizacao',
-            'municipio_realizacao'  ,
-        ]
-    ].sort_values(['data_internacao', 'numero_aih', 'cnes']).reset_index(drop=True)
-
+def _(admissions, consolidate_admissions):
+    consolidated = consolidate_admissions(admissions)
 
     consolidated.head()
     return (consolidated,)
@@ -530,28 +293,27 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    Dates are stored in ISO format (`YYYY-MM-DD`), using UTF-8 encoding with BOM, and codes are preserved as text in the DataFrame. When reopening the CSV, use `dtype="string"` to preserve leading zeros in codes.
+    Dates are stored in ISO format (`YYYY-MM-DD`), using UTF-8 encoding with BOM, and codes are preserved as text in the DataFrame. When reopening the CSV, specify code columns as strings to preserve leading zeros.
     """)
     return
 
 
 @app.cell
-def _(CSV, consolidated, mo):
-    temporario_csv = CSV.with_suffix('.tmp')
+def _(CSV_PATH, consolidated, mo):
+    _temporary_csv = CSV_PATH.with_suffix(".tmp")
 
     consolidated.to_csv(
-        temporario_csv,
+        _temporary_csv,
 
-        index      =False      ,
-        encoding   ='utf-8-sig',
-        date_format='%Y-%m-%d' ,
+        index      =False,
+        encoding   ="utf-8-sig",
+        date_format="%Y-%m-%d" ,
     )
 
-    temporario_csv.replace(CSV)
-
+    _temporary_csv.replace(CSV_PATH)
 
     with mo.redirect_stdout():
-        print(f'{len(consolidated):,} internações salvas em {CSV}')
+        print(f"{len(consolidated):,} admissions saved to {CSV_PATH}")
     return
 
 
@@ -575,40 +337,48 @@ def _(mo):
 
 @app.cell
 def _(consolidated):
-    pares = consolidated.dropna(subset=['codigo_ibge_residencia', 'codigo_ibge_realizacao'])
+    matched_pairs = consolidated.dropna(
+        subset=["residence_ibge_code", "procedure_ibge_code"]
+    )
 
-    fora_municipio = pares['codigo_ibge_residencia']        .ne(pares['codigo_ibge_realizacao']        )
-    fora_uf        = pares['codigo_ibge_residencia'].str[:2].ne(pares['codigo_ibge_realizacao'].str[:2])
+    out_of_municipality = matched_pairs["residence_ibge_code"]        .ne(matched_pairs["procedure_ibge_code"])
+    out_of_state        = matched_pairs["residence_ibge_code"].str[:2].ne(matched_pairs["procedure_ibge_code"].str[:2])
 
-    demanda = consolidated.groupby(['codigo_ibge_residencia', 'municipio_residencia']).size().rename('demanda')
-    supply  = consolidated.groupby(['codigo_ibge_realizacao', 'municipio_realizacao']).size().rename('supply' )
+    demand = consolidated.groupby(["residence_ibge_code", "residence_municipality"]).size().rename("demand")
+    supply = consolidated.groupby(["procedure_ibge_code", "procedure_municipality"]).size().rename("supply")
 
-    mensal  = consolidated.groupby(consolidated['data_internacao'].dt.to_period('M')).size()
-    return demanda, fora_municipio, fora_uf, mensal, pares, supply
+    monthly_admissions = consolidated.groupby(
+        consolidated["admission_date"].dt.to_period("M")
+    ).size()
+    return (
+        demand,
+        matched_pairs,
+        monthly_admissions,
+        out_of_municipality,
+        out_of_state,
+        supply,
+    )
 
 
 @app.cell
-def _(consolidated, demanda, mo, pares, pd, supply):
-    _resumo = pd.Series(
+def _(consolidated, demand, matched_pairs, mo, pd, supply):
+    _summary = pd.Series(
         {
-            'Internações (AIHs)' : len(consolidated),
+            "Admissions (AIHs)"                       : len(consolidated),
+            "Municipalities of residence"             : len(demand),
+            "Municipalities performing the procedure" : len(supply),
 
-            'Municípios de residência' : len(demanda),
-            'Municípios de realização' : len(supply ),
-            'Hospitais (CNES)'         : consolidated['cnes'].nunique(),
+            "Healthcare establishments (CNES)"      : consolidated["cnes"].nunique(),
+            "Residence without IBGE match"          : consolidated["residence_ibge_code"].isna().sum(),
+            "Procedure location without IBGE match" : consolidated["procedure_ibge_code"].isna().sum(),
 
-            'Residência sem correspondência IBGE' : consolidated['codigo_ibge_residencia'].isna().sum(),
-            'Realização sem correspondência IBGE' : consolidated['codigo_ibge_realizacao'].isna().sum(),
-
-            'Pares de municípios identificados' : len(pares),
+            "Identified municipality pairs" : len(matched_pairs),
         },
-
-        name='valor'
-    ).rename_axis('indicador').reset_index()
-
+        name="value",
+    ).rename_axis("indicator").reset_index()
 
     mo.ui.table(
-        _resumo,
+        _summary,
 
         selection =None ,
         pagination=False,
@@ -618,21 +388,21 @@ def _(consolidated, demanda, mo, pares, pd, supply):
 
 
 @app.cell
-def _(consolidated, fora_municipio, fora_uf, mo, pd):
-    _indicadores = pd.Series(
+def _(consolidated, mo, out_of_municipality, out_of_state, pd):
+    _indicators = pd.Series(
         {
-            'Atendimento fora do município (%)' : 100 * fora_municipio.mean(),
-            'Atendimento fora da UF (%)'        : 100 * fora_uf       .mean(),
-
-            'Permanência mediana (dias)' : (consolidated['data_saida'] - consolidated['data_internacao']).dt.days.median(),
+            "Outside municipality (%)"     : 100 * out_of_municipality.mean(),
+            "Outside state (%)"            : 100 * out_of_state       .mean(),
+            "Median length of stay (days)" : (
+                consolidated["discharge_date"] - consolidated["admission_date"]
+            ).dt.days.median(),
         },
 
-        name='valor'
-    ).round(2).rename_axis('indicador').reset_index()
-
+        name="value",
+    ).round(2).rename_axis("indicator").reset_index()
 
     mo.ui.table(
-        _indicadores,
+        _indicators,
 
         selection =None ,
         pagination=False,
@@ -642,21 +412,19 @@ def _(consolidated, fora_municipio, fora_uf, mo, pd):
 
 
 @app.cell
-def _(FIM, INICIO, mensal, mo, pd):
-    _mensal = mensal.reindex(
+def _(END_DATE, START_DATE, mo, monthly_admissions, pd):
+    _monthly = monthly_admissions.reindex(
         pd.period_range(
-            INICIO,
-            FIM   ,
+            START_DATE,
+            END_DATE  ,
 
             freq="M",
         ),
-
         fill_value=0,
-    ).rename_axis("mes_internacao").to_frame("internacoes").reset_index()
-
+    ).rename_axis("admission_month").to_frame("admissions").reset_index()
 
     mo.ui.table(
-        _mensal,
+        _monthly,
 
         selection =None ,
         pagination=False,
@@ -666,9 +434,9 @@ def _(FIM, INICIO, mensal, mo, pd):
 
 
 @app.cell
-def _(demanda, mo):
+def _(demand, mo):
     mo.ui.table(
-        demanda.nlargest(10).reset_index(),
+        demand.nlargest(10).reset_index(),
 
         selection =None ,
         pagination=False,
