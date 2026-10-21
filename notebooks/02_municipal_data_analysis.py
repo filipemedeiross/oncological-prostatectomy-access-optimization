@@ -138,8 +138,14 @@ def _(
     municipal = attach_centroids(
         aggregate_municipal(admissions),
         boundaries                     ,
+    ).round(
+        {
+            "latitude"  : 6,
+            "longitude" : 6,
+        }
     )
-    flows     = observed_flows(admissions)
+
+    flows = observed_flows(admissions)
     return admissions, boundaries, flows, municipal, states
 
 
