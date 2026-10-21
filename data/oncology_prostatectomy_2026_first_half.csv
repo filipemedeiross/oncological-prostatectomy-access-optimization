@@ -1,4 +1,4 @@
-﻿numero_aih,cnes,codigo_procedimento,data_internacao,data_saida,competencia,codigo_ibge_residencia,municipio_residencia,codigo_ibge_realizacao,municipio_realizacao
+﻿aih_number,cnes,procedure_code,admission_date,discharge_date,reference_month,residence_ibge_code,residence_municipality,procedure_ibge_code,procedure_municipality
 1226500000605,2001586,0416010121,2026-01-01,2026-01-07,2026-01,1200203,Cruzeiro do Sul,1200401,Rio Branco
 1526106627639,5585422,0416010121,2026-01-02,2026-01-05,2026-01,1506807,Santarém,1506807,Santarém
 3126107562028,2149990,0416010121,2026-01-02,2026-01-05,2026-01,3143302,Montes Claros,3143302,Montes Claros
