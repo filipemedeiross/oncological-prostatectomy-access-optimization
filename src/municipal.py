@@ -453,7 +453,19 @@ def validate_od(od, municipal, admissions):
 
     status = od["route_status"]
 
-    if status.isna().any() or not status.isin(["ok", "no_route", "intramunicipal"]).all():
+    allowed_statuses = [
+        "ok"                  ,
+        "intramunicipal"      ,
+        "proxy_imputed"       ,
+        "specific_estimate"   ,
+        "municipality_missing",
+        "pair_missing"        ,
+        "estimate_missing"    ,
+        "proxy_self_pending"  ,
+        "no_route"            ,
+    ]
+
+    if status.isna().any() or not status.isin(allowed_statuses).all():
         raise ValueError("Unknown or missing route_status.")
 
     if not status.eq("intramunicipal").eq(local_mask).all():
@@ -464,15 +476,35 @@ def validate_od(od, municipal, admissions):
     if not all(pd.api.types.is_numeric_dtype(dtype) for dtype in measures.dtypes):
         raise ValueError("Route distance and duration must be numeric.")
 
-    no_route = status.eq("no_route")
+    absent = status.isin(["municipality_missing", "pair_missing", "no_route"])
 
-    if not measures.loc[no_route].isna().all().all():
-        raise ValueError("no_route requires missing distance and duration.")
+    if not measures.loc[absent].isna().all().all():
+        raise ValueError("Missing municipalities or pairs require missing distance and duration.")
 
-    routed = measures.loc[~no_route]
+    incomplete = status.isin(["estimate_missing", "proxy_self_pending"])
 
-    if not np.isfinite(routed.to_numpy(dtype=float)).all() or routed.lt(0).any().any():
-        raise ValueError("Routed distances and times must be finite and nonnegative.")
+    if not measures.loc[incomplete].isna().any(axis=1).all():
+        raise ValueError("Pending estimates require a missing distance or duration.")
+
+    resolved = status.isin(
+        [
+            "ok"               ,
+            "intramunicipal"   ,
+            "proxy_imputed"    ,
+            "specific_estimate",
+        ]
+    )
+
+    if measures.loc[resolved].isna().any().any():
+        raise ValueError("Resolved routes require both distance and duration.")
+
+    values = measures.to_numpy(dtype=float, na_value=np.nan)
+
+    if not np.isfinite(values[~np.isnan(values)]).all():
+        raise ValueError("Available distances and times must be finite.")
+
+    if measures.loc[~local_mask].le(0).any().any():
+        raise ValueError("Intermunicipal distance and duration must be positive.")
 
     if not measures.loc[local_mask].eq(0).all().all():
         raise ValueError("Intramunicipal distance and duration must be zero.")
