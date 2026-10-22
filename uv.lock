@@ -1050,6 +1050,7 @@ name = "oncological-prostatectomy-access-optimization"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "duckdb" },
     { name = "geopandas" },
     { name = "marimo" },
     { name = "matplotlib" },
@@ -1058,6 +1059,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "duckdb", specifier = ">=1.5.6" },
     { name = "geopandas", specifier = ">=1.2.0" },
     { name = "marimo", specifier = ">=0.25.2" },
     { name = "matplotlib", specifier = ">=3.11.2" },
