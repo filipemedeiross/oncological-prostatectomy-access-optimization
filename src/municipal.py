@@ -510,6 +510,57 @@ def validate_od(od, municipal, admissions):
         raise ValueError("Intramunicipal distance and duration must be zero.")
 
 
+def flow_metrics(table):
+    counts = table["observed_flow"].to_numpy()
+
+    n = int(counts.sum())
+
+    distances =       np.repeat(table["distance_km"].to_numpy(), counts )
+    total     = float(np.dot   (table["distance_km"]           , counts))
+
+    metrics = {
+        "n_admissions"        : n         ,
+        "n_observed_od_pairs" : len(table),
+        "n_origins"           : int(table["origin_code"     ].nunique()),
+        "n_destinations"      : int(table["destination_code"].nunique()),
+
+        "total_distance_km" : total    ,
+        "mean_distance_km"  : total / n,
+        "max_distance_km"   : float(distances.max()),
+    }
+
+    metrics.update(
+        zip(
+            [
+                "median_distance_km",
+                "p75_distance_km"   ,
+                "p90_distance_km"   ,
+                "p95_distance_km"   ,
+            ],
+
+            map(
+                float, np.percentile(distances, [50, 75, 90, 95], method="linear")
+            ),
+        )
+    )
+
+    for level in ["municipality", "state"]:
+        same = int(
+            table.loc[table[f"same_{level}"], "observed_flow"].sum()
+        )
+
+        metrics.update({
+            f"n_same_{level}"    : same    ,
+            f"n_outside_{level}" : n - same,
+        })
+
+    return {
+        key : round   (value, 2    )
+        if  isinstance(value, float) else value
+        for key, value in metrics.items()
+    }
+
+
 def write_csv(table, path):
     """Atomically write UTF-8 BOM CSV without truncating floating-point precision"""
 
