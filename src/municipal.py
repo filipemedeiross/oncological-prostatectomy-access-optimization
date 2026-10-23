@@ -510,8 +510,10 @@ def validate_od(od, municipal, admissions):
         raise ValueError("Intramunicipal distance and duration must be zero.")
 
 
-def flow_metrics(table):
-    counts = table["observed_flow"].to_numpy()
+def flow_metrics(table, *, flow_column="observed_flow", decimals=2):
+    """Admission-weighted metrics; pass decimals=None to retain full precision"""
+
+    counts = table[flow_column].to_numpy()
 
     n = int(counts.sum())
 
@@ -546,7 +548,7 @@ def flow_metrics(table):
 
     for level in ["municipality", "state"]:
         same = int(
-            table.loc[table[f"same_{level}"], "observed_flow"].sum()
+            table.loc[table[f"same_{level}"], flow_column].sum()
         )
 
         metrics.update({
@@ -555,8 +557,9 @@ def flow_metrics(table):
         })
 
     return {
-        key : round   (value, 2    )
-        if  isinstance(value, float) else value
+        key : round    (value, decimals)
+        if   isinstance(value, float   ) and decimals is not None
+        else value
         for key, value in metrics.items()
     }
 
