@@ -203,9 +203,6 @@ def load_inputs(od_path, municipal_path):
     if not local_counts.eq(municipal["local_care"]).all():
         raise ValueError("Observed local care differs from municipal counts.")
 
-    if route_audit(od)["n_observed_pairs_missing_measures"]:
-        raise ValueError("Observed admissions have missing distance or travel time.")
-
     municipal["label"] = municipal["municipality"] + "/" + municipal["state"]
 
     od = od.sort_values(KEYS).reset_index(drop=True)
