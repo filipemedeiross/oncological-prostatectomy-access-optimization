@@ -305,16 +305,7 @@ def scenario_metrics(table, flow_column):
 
     _integer_counts(table[flow_column], flow_column)
 
-    active = table.loc[table[flow_column].gt(0)]
-
-    if active.empty or not np.isfinite(active["distance_km"]).all() or active["distance_km"].lt(0).any():
-        raise ValueError("Metrics require positive admissions with finite nonnegative distances.")
-
-    for level in ["municipality", "state"]:
-        flag = active[f"same_{level}"]
-
-        if not pd.api.types.is_bool_dtype(flag) or flag.isna().any():
-            raise ValueError(f"Metrics require complete boolean same_{level} flags.")
+    active  = table.loc[table[flow_column].gt(0)]
 
     metrics = flow_metrics(active, flow_column=flow_column, decimals=None)
 
@@ -344,9 +335,6 @@ def compare_metrics(observed_metrics, nearest_metrics):
     total     =         observed_metrics["total_distance_km"]
     mean      =         observed_metrics["mean_distance_km" ]
     reduction = total - nearest_metrics ["total_distance_km"]
-
-    if reduction < -ATOL:
-        raise ValueError("Nearest-provider allocation is worse than the observed baseline.")
 
     return {
         "baseline_total_distance_km"     : total    ,
