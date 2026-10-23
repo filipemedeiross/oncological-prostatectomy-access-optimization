@@ -113,9 +113,8 @@ def _():
 
 @app.cell
 def _(ROOT):
-    PERIOD      = "2026_first_half"
-
-    TOP_N       = 10
+    PERIOD = "2026_first_half"
+    TOP_N  = 10
 
     CASE_STATES = ("MA", "PA")
 
@@ -463,7 +462,13 @@ def _(Figure, Mapping, PLOT_STYLE, np, plt):
 
                 ax.invert_yaxis()
 
-                ax.set_title(title, loc="left", fontsize=12, pad=14)
+                ax.set_title(
+                    title,
+
+                    loc     ="left",
+                    fontsize=12    ,
+                    pad     =14    ,
+                )
 
                 ax.spines[:].set_visible(False)
 
@@ -474,8 +479,8 @@ def _(Figure, Mapping, PLOT_STYLE, np, plt):
             fig.legend(
                 *ax.get_legend_handles_labels(),
 
-                ncol          =2 ,
-                fontsize      =10,
+                ncol          =2    ,
+                fontsize      =10   ,
                 frameon       =False,
                 loc           ="lower center",
                 bbox_to_anchor=(0.5, 0.045)  ,
@@ -511,7 +516,7 @@ def _(metrics, mo, observed_metrics, pd):
             }
         )
         .rename_axis("metric")
-        .reset_index(),
+        .reset_index(        ),
 
         selection=None,
         label    ="National metrics (admission-weighted distances in km)",
@@ -541,7 +546,13 @@ def _(mo):
 
 @app.cell
 def _(TOP_N, impact_tables, municipal, observed, scenario):
-    impact = impact_tables(observed, scenario, municipal, top_n=TOP_N)
+    impact = impact_tables(
+        observed ,
+        scenario ,
+        municipal,
+
+        top_n=TOP_N,
+    )
     return (impact,)
 
 
@@ -592,7 +603,13 @@ def _(
                 )
 
             fig, (ax, detail) = plt.subplots(
-                1, 2, figsize=(13.5, 8.8), gridspec_kw={"width_ratios": [3.5, 1.9]},
+                1,
+                2,
+
+                figsize    =(13.5, 8.8),
+                gridspec_kw={
+                    "width_ratios" : [3.5, 1.9]
+                },
             )
 
             fig.subplots_adjust(
@@ -607,7 +624,14 @@ def _(
 
             field = "increase_pct" if percentage else "net_increase"
 
-            bars = ax.barh(y, frame[field], height=0.65, zorder=3, color=COLORS["nearest"])
+            bars = ax.barh(
+                y           ,
+                frame[field],
+
+                height=0.65,
+                zorder=3   ,
+                color =COLORS["nearest"],
+            )
 
             ax.bar_label(
                 bars,
@@ -638,7 +662,7 @@ def _(
             if percentage:
                 ax.xaxis.set_major_formatter(FuncFormatter(lambda value, _: br(value)))
             else:
-                ax.xaxis.set_major_locator  (MaxNLocator(integer=True))
+                ax.xaxis.set_major_locator  (MaxNLocator  (integer=True))
 
             ax.xaxis.grid(True, alpha=0.18, zorder=0)
 
@@ -665,9 +689,26 @@ def _(
 
                 value = f"+{br(row.net_increase)}" if percentage else f"+{br(row.increase_pct)}%"
 
-                detail.text(0.88, position, value, ha="center", va="center", color="#52616D")
+                detail.text(
+                    0.88    ,
+                    position,
+                    value   ,
 
-            fig.suptitle(title, x=0.04, y=0.97, fontsize=17, ha="left", weight="bold")
+                    ha   ="center" ,
+                    va   ="center" ,
+                    color="#52616D",
+                )
+
+            fig.suptitle(
+                title,
+
+                x       =0.04,
+                y       =0.97,
+                fontsize=17  ,
+
+                ha    ="left",
+                weight="bold",
+            )
 
             fig.text(0.04, 0.915, subtitle, fontsize=11)
             fig.text(0.04, 0.025, footer  , fontsize=9 , color="#52616D")
@@ -684,7 +725,12 @@ def _(export_figure, impact, mo, provider_growth):
 
     growth_paths = _growth_paths + _percentage_paths
 
-    mo.vstack([_growth, _percentage])
+    mo.vstack(
+        [
+            _growth    ,
+            _percentage,
+        ]
+    )
     return (growth_paths,)
 
 
@@ -755,14 +801,22 @@ def _(
             )
 
             ax.xaxis.set_major_formatter(FuncFormatter(lambda value, _: br(value)))
-
-            ax.xaxis.grid(True, alpha=0.18, zorder=0)
+            ax.xaxis.grid               (True, alpha=0.18, zorder=0)
 
             ax.tick_params(axis="y", length=0)
 
             ax.spines[["left", "bottom"]].set_visible(False)
 
-            fig.suptitle(title, x=0.04, y=0.97, fontsize=16, ha="left", weight="bold")
+            fig.suptitle(
+                title,
+
+                x       =0.04,
+                y       =0.97,
+                fontsize=16  ,
+
+                ha    ="left",
+                weight="bold",
+            )
 
             share = 100 * top_saving["saved_admission_km"].sum() / saved_total
 
@@ -876,7 +930,8 @@ def _(ROOT, STATE_CODES, gpd, load_boundaries, municipal):
         "points" : gpd.GeoDataFrame(
             municipal.copy(),
 
-            crs     =4674,
+            crs=4674,
+
             geometry=gpd.points_from_xy(
                 municipal["longitude"],
                 municipal["latitude" ],
@@ -979,12 +1034,12 @@ def _(CAPITALS, TOP_N, br, impact, municipal):
 
                 "capital_reference" : [
                     {
-                        "state"         : uf  ,
-                        "capital_code"  : code,
+                        "state"         : uf            ,
+                        "capital_code"  : code          ,
                         "capital_label" : f"{name}/{uf}",
                     }
                     for uf, (code, name) in CAPITALS.items()
-                    if uf in set(municipal["state"])
+                    if  uf in set(municipal["state"])
                 ],
 
                 "local_arrow" : "Schematic loop for same-municipality care; modeled distance remains zero.",
@@ -1011,7 +1066,18 @@ def _(COLORS, FancyArrowPatch, Line2D, MAP_DESTINATIONS, MAP_FOOTNOTE):
             if limits and not (limits[0][0] < center.x < limits[0][1] and limits[1][0] < center.y < limits[1][1]):
                 continue
 
-            ax.text(center.x, center.y, uf, zorder=1, fontsize=fontsize, color="#CCD5DC", weight="bold", ha="center", va="center")
+            ax.text(
+                center.x,
+                center.y,
+                uf      ,
+
+                zorder  =1,
+                color   ="#CCD5DC",
+                weight  ="bold"   ,
+                ha      ="center" ,
+                va      ="center" ,
+                fontsize=fontsize ,
+            )
 
     def map_arrows(ax, row, points, span=None):
         origin = points.loc[row.origin_code].geometry
@@ -1028,9 +1094,9 @@ def _(COLORS, FancyArrowPatch, Line2D, MAP_DESTINATIONS, MAP_FOOTNOTE):
                             (origin.x - radius, origin.y),
                             (origin.x, origin.y + radius),
 
-                            lw            =2.2,
-                            zorder        =4  ,
-                            mutation_scale=14 ,
+                            lw            =2.2  ,
+                            zorder        =4    ,
+                            mutation_scale=14   ,
                             color         =color,
                             linestyle     =style,
 
@@ -1039,7 +1105,17 @@ def _(COLORS, FancyArrowPatch, Line2D, MAP_DESTINATIONS, MAP_FOOTNOTE):
                         )
                     )
 
-                ax.scatter(origin.x, origin.y, s=165 if span else 180, facecolors="none", edgecolors=color, lw=2, zorder=4 if span else 6)
+                ax.scatter (
+                    origin.x,
+                    origin.y,
+
+                    facecolors="none",
+                    edgecolors=color ,
+
+                    lw    =2,
+                    s     =165 if span else 180,
+                    zorder=4   if span else 6  ,
+                )
             else:
                 ax.annotate(
                     "",
@@ -1070,7 +1146,18 @@ def _(COLORS, FancyArrowPatch, Line2D, MAP_DESTINATIONS, MAP_FOOTNOTE):
         ]
 
         if regional:
-            handles.append(Line2D([], [], color=COLORS["nearest"], marker="o", ls="none", label="Atendimento local", markerfacecolor="none"))
+            handles.append(
+                Line2D(
+                    [],
+                    [],
+
+                    marker         ="o"   ,
+                    ls             ="none",
+                    markerfacecolor="none",
+                    label          ="Atendimento local",
+                    color          =COLORS["nearest"]  ,
+                )
+            )
 
         fig.legend(
             handles=handles     ,
@@ -1112,17 +1199,34 @@ def _(
 
         padding = 0.06 * max(xmax - xmin, ymax - ymin)
 
-        limits = ((xmin - padding, xmax + padding), (ymin - padding, ymax + padding))
+        limits = (
+            (xmin - padding, xmax + padding),
+            (ymin - padding, ymax + padding),
+        )
 
         with plt.rc_context(PLOT_STYLE):
             fig, axes = plt.subplots(1, len(cases), figsize=(6 * len(cases), 8.5), squeeze=False)
 
-            fig.subplots_adjust(left=0.015, right=0.985, bottom=0.20, top=0.77, wspace=0.10)
+            fig.subplots_adjust(
+                left  =0.015,
+                right =0.985,
+                bottom=0.20 ,
+                top   =0.77 ,
+                wspace=0.10 ,
+            )
 
             for ax, row in zip(axes.ravel(), cases.itertuples()):
                 mesh.plot(ax=ax, facecolor="#F2F5F7", edgecolor="#AAB6C0", linewidth=0.8)
 
-                state_labels(ax, mesh, region["ufs"], context["uf_to_code"], 24)
+                state_labels(
+                    ax  ,
+                    mesh,
+
+                    region ["ufs"       ],
+                    context["uf_to_code"],
+
+                    24,
+                )
 
                 map_arrows(ax, row, points)
 
@@ -1178,7 +1282,12 @@ def _(
                         }
                     )
 
-                ax.set(xlim=limits[0], ylim=limits[1], aspect="equal")
+                ax.set(
+                    xlim=limits[0],
+                    ylim=limits[1],
+
+                    aspect="equal",
+                )
 
                 ax.set_axis_off()
 
@@ -1200,9 +1309,24 @@ def _(
                     transform=ax.transAxes,
                 )
 
-            fig.suptitle(f"Deslocamentos alterados · {region['name']}", x=0.025, y=0.98, fontsize=17, ha="left", weight="bold")
+            fig.suptitle(
+                f"Deslocamentos alterados · {region['name']}",
 
-            fig.text(0.025, 0.915, f"{len(cases)} casos do top {top_n} nacional", fontsize=11)
+                x       =0.025 ,
+                y       =0.98  ,
+                fontsize=17    ,
+                ha      ="left",
+                weight  ="bold",
+            )
+
+            fig.text(
+                0.025,
+                0.915,
+
+                f"{len(cases)} casos do top {top_n} nacional",
+
+                fontsize=11,
+            )
 
             map_legend(fig, regional=True)
 
@@ -1233,7 +1357,7 @@ def _(TOP_N, cartography, export_figure, map_cases, mo, regional_case_maps):
 
         _panels.append(
             _figure
-            if _figure is not None
+            if   _figure is not None
             else mo.md(
                 f"No national top-{TOP_N} flows meet the selection for **{_region['name']}**."
             )
@@ -1277,7 +1401,13 @@ def _(
         with plt.rc_context(PLOT_STYLE):
             fig, axes = plt.subplots(1, len(cases), figsize=(6 * len(cases), 8.6), squeeze=False)
 
-            fig.subplots_adjust(left=0.025, right=0.985, top=0.80, bottom=0.285, wspace=0.12)
+            fig.subplots_adjust(
+                left  =0.025,
+                right =0.985,
+                top   =0.80 ,
+                bottom=0.285,
+                wspace=0.12 ,
+            )
 
             for position, (ax, row) in enumerate(zip(axes.ravel(), cases.itertuples()), start=1):
                 codes = [
@@ -1290,7 +1420,11 @@ def _(
 
                 xs, ys = coordinates.x.to_numpy(), coordinates.y.to_numpy()
 
-                span = max(float(np.ptp(xs)), float(np.ptp(ys)), 30_000.0)
+                span = max(
+                    float(np.ptp(xs)),
+                    float(np.ptp(ys)),
+                    30_000.0         ,
+                )
 
                 padding = 0.19 * span
 
@@ -1298,7 +1432,10 @@ def _(
 
                 ratio = (box.width * fig.get_figwidth()) / (box.height * fig.get_figheight())
 
-                width  = max(float(np.ptp(xs)) + 2 * padding, (float(np.ptp(ys)) + 2 * padding) * ratio)
+                width  = max(
+                     float(np.ptp(xs)) + 2 * padding         ,
+                    (float(np.ptp(ys)) + 2 * padding) * ratio,
+                )
                 height = width / ratio
 
                 midx, midy = float((xs.min() + xs.max()) / 2)    , float((ys.min() + ys.max()) / 2)
@@ -1310,7 +1447,14 @@ def _(
                     (bounds["maxy"] >= ylim[0]) & (bounds["miny"] <= ylim[1])
                 ]
 
-                visible.plot(ax=ax, zorder=0, linewidth=0.8, facecolor="#F2F5F7", edgecolor="#AAB6C0")
+                visible.plot(
+                    ax=ax,
+
+                    zorder   =0  ,
+                    linewidth=0.8,
+                    facecolor="#F2F5F7",
+                    edgecolor="#AAB6C0",
+                )
 
                 state_labels(
                     ax, states, {row.origin_state, row.observed_state, row.nearest_state}, context["uf_to_code"], 21, (xlim, ylim)
@@ -1320,7 +1464,7 @@ def _(
 
                 origin = points.loc[row.origin_code].geometry
 
-                local  = row   .nearest_destination_code == row.origin_code
+                local = row.nearest_destination_code == row.origin_code
 
                 for field, role, color, marker, offset, ha, va in [
                     ("origin_code"              , "Origem"                                , COLORS["text"    ], "o", (-8, -10), "right", "top"   ),
@@ -1336,7 +1480,18 @@ def _(
 
                         offset, ha, va = (dx, dy), "left" if dx > 0 else "right", "bottom" if dy > 0 else "top"
 
-                    ax.scatter (point.x, point.y, s=47, zorder=5, linewidths=0.7, marker=marker, color=color, edgecolors="white")
+                    ax.scatter (
+                        point.x,
+                        point.y,
+
+                        s         =47 ,
+                        zorder    =5  ,
+                        linewidths=0.7,
+
+                        marker    =marker ,
+                        color     =color  ,
+                        edgecolors="white",
+                    )
 
                     ax.annotate(
                         role              ,
@@ -1360,7 +1515,12 @@ def _(
                         }
                     )
 
-                ax.set(xlim=xlim, ylim=ylim, aspect="equal")
+                ax.set(
+                    xlim=xlim,
+                    ylim=ylim,
+
+                    aspect="equal",
+                )
 
                 ax.set_axis_off()
 
@@ -1410,7 +1570,15 @@ def _(
                     }
                 )
 
-            fig.suptitle(title, x=0.025, y=0.98, fontsize=17, ha="left", weight="bold")
+            fig.suptitle(
+                title,
+
+                x       =0.025 ,
+                y       =0.98  ,
+                fontsize=17    ,
+                ha      ="left",
+                weight  ="bold",
+            )
 
             fig.text(0.025, 0.918, subtitle, fontsize=11)
 
@@ -1460,7 +1628,7 @@ def _(cartography, export_figure, map_cases, mo, selected_case_maps):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## REGIONAL VARIANT: AMAZONAS AND PARÁ
+    ## REGIONAL VARIANT: MARANHÃO AND PARÁ
     """)
     return
 
@@ -1468,7 +1636,7 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    Retain observed flows with **both origin and destination in AM or PA**. Their admissions define the regional demand, which is reallocated only to observed provider municipalities within AM or PA. Residents treated elsewhere are excluded from both panels. This is a separate regional scenario, rather than a geographic subset of the national solution.
+    Retain observed flows with **both origin and destination in MA or PA**. Their admissions define the regional demand, which is reallocated only to observed provider municipalities within MA or PA. Residents treated elsewhere are excluded from both panels. This is a separate regional scenario, rather than a geographic subset of the national solution.
     """)
     return
 
@@ -1518,6 +1686,7 @@ def _(
 
 @app.cell
 def _(
+    CASE_STATES,
     COLORS,
     Line2D,
     LineCollection,
@@ -1529,7 +1698,7 @@ def _(
     plt,
 ):
     def regional_comparison(observed, scenario, municipal, context):
-        """Plot the separately recalculated AM/PA case, retaining a common scale"""
+        """Plot the separately recalculated MA/PA case, retaining a common scale"""
 
         if observed.empty or scenario.empty:
             return None
@@ -1538,7 +1707,7 @@ def _(
 
         state_codes = [
             context["uf_to_code"][uf]
-            for uf in ("AM", "PA")
+            for uf in CASE_STATES
         ]
 
         states     = context["states"   ].loc[state_codes]
@@ -1550,7 +1719,7 @@ def _(
         coordinates = pd.DataFrame(xy, index=points.index)
 
         provider_codes = municipal.index[
-            municipal["state"          ].isin(["AM", "PA"]) &
+            municipal["state"          ].isin(CASE_STATES) &
             municipal["observed_supply"].gt  (0)
         ]
 
@@ -1570,13 +1739,25 @@ def _(
         with plt.rc_context(PLOT_STYLE):
             fig, axes = plt.subplots(1, 2, figsize=(15, 7.5), sharex=True, sharey=True)
 
-            fig.subplots_adjust(left=0.02, right=0.98, bottom=0.19, top=0.84, wspace=0.05)
+            fig.subplots_adjust(
+                left  =0.02,
+                right =0.98,
+                bottom=0.19,
+                top   =0.78,
+                wspace=0.05,
+            )
 
             for ax, flows, count, title, total in [
                 (axes[0], observed, "observed_flow", "A) Fluxo observado"      , before),
                 (axes[1], scenario, frequency      , "B) Provedor mais próximo", after ),
             ]:
-                boundaries.plot(ax=ax, facecolor="#F6F7F8", edgecolor="#CFD5D9", linewidth=0.22)
+                boundaries.plot(
+                    ax=ax,
+
+                    linewidth=0.22     ,
+                    facecolor="#F6F7F8",
+                    edgecolor="#CFD5D9",
+                )
 
                 states.boundary.plot(ax=ax, color="#79868F", linewidth=0.8)
 
@@ -1595,8 +1776,8 @@ def _(
                     linewidths=0.4 + 0.65 * np.sqrt(volumes[~local]),
                 ))
 
-                ax.scatter(origins  [~local, 0], origins  [~local, 1], s=9                                , color=COLORS["nearest"], zorder=4)
-                ax.scatter(providers[:     , 0], providers[:     , 1], s=24                               , color="#182C3A"        , zorder=5)
+                ax.scatter(origins  [~local, 0], origins  [~local, 1], s=9 , color=COLORS["nearest"], zorder=4)
+                ax.scatter(providers[:     , 0], providers[:     , 1], s=24, color="#182C3A"        , zorder=5)
                 ax.scatter(
                     origins[local, 0],
                     origins[local, 1],
@@ -1609,18 +1790,55 @@ def _(
                     edgecolors=COLORS["nearest"],
                 )
 
-                ax.set      (xlim=(xmin - padding, xmax + padding), ylim=(ymin - padding, ymax + padding), aspect="equal")
+                ax.set(
+                    xlim=(xmin - padding, xmax + padding),
+                    ylim=(ymin - padding, ymax + padding),
 
-                ax.set_title(f"{title}\nDistância total = {br(total, 1)} km", loc="left", fontsize=11, linespacing=1.8, pad=14, y=1.03)
+                    aspect="equal",
+                )
+
+                ax.set_title(
+                    f"{title}\nDistância total = {br(total, 1)} km",
+
+                    loc        ="left",
+                    fontsize   =11  ,
+                    linespacing=1.8 ,
+                    pad        =14  ,
+                    y          =1.03,
+                )
 
                 ax.set_axis_off()
 
-            fig.suptitle("Fluxo observado e realocação para provedor mais próximo · Amazonas e Pará", fontsize=15, y=0.96)
+            fig.suptitle(
+                "Fluxo observado e realocação para provedor mais próximo · Maranhão e Pará",
+
+                fontsize=15  ,
+                y       =0.96,
+            )
 
             fig.legend(
                 handles=[
-                    Line2D([], [], marker="o", linestyle="none", color="#182C3A"       , markersize=np.sqrt(24), label="Município provedor"),
-                    Line2D([], [], marker="o", linestyle="none", markerfacecolor="none", markersize=9, markeredgecolor=COLORS["nearest"], label="Admissões locais"),
+                    Line2D(
+                        [],
+                        [],
+
+                        marker    ="o"        ,
+                        linestyle ="none"     ,
+                        color     ="#182C3A"  ,
+                        markersize=np.sqrt(24),
+                        label     ="Município provedor",
+                    ),
+                    Line2D(
+                        [],
+                        [],
+
+                        marker         ="o"   ,
+                        markersize     =9     ,
+                        linestyle      ="none",
+                        markerfacecolor="none",
+                        label          ="Admissões locais",
+                        markeredgecolor=COLORS["nearest"] ,
+                    ),
                 ],
 
                 loc           ="lower center",
@@ -1632,7 +1850,7 @@ def _(
             )
 
             fig.text(0.5, 0.065, f"Redução de distância: {br(before - after, 1)} km ({br(reduction_pct, 1)}%)", ha="center", fontsize=10)
-            fig.text(0.5, 0.025, MAP_FOOTNOTE                                                                 , ha="center", fontsize=8, color="#53616A")
+            fig.text(0.5, 0.025, MAP_FOOTNOTE                                                                 , ha="center", fontsize=8 , color="#53616A")
 
         return fig
 
@@ -1641,6 +1859,7 @@ def _(
 
 @app.cell
 def _(
+    CASE_STATES,
     cartography,
     case_observed,
     case_scenario,
@@ -1656,7 +1875,7 @@ def _(
             cartography  ,
         ),
 
-        "am_pa_observed_vs_nearest_provider",
+        f"{'_'.join(CASE_STATES).lower()}_observed_vs_nearest_provider",
     )
 
     _figure
@@ -1676,7 +1895,7 @@ def _(case_metrics, mo, pd):
         .reset_index(),
 
         selection=None,
-        label    ="AM/PA regional metrics (same retained admissions in both scenarios)",
+        label    ="MA/PA regional metrics (same retained admissions in both scenarios)",
     )
     return
 
@@ -1768,7 +1987,7 @@ def _(
 
     mo.md(
         f"**Validated and exported:** `{RESULT.relative_to(ROOT)}`; "
-        f"`{METRICS.relative_to(ROOT)}`; {len(_figures) // 2} figures (PDF)."
+        f"`{METRICS.relative_to(ROOT)}`; {len(_figures)} figures (PDF)."
     )
     return
 

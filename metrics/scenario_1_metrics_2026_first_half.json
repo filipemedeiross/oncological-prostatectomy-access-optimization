@@ -1,0 +1,49 @@
+{
+  "scenario": 1,
+  "scenario_name": "unconstrained_nearest_provider_reallocation",
+  "metrics": {
+    "nearest_provider": {
+      "n_admissions": 1734,
+      "n_origins": 784,
+      "total_distance_km": 74150.264,
+      "mean_distance_km": 42.76255132641292,
+      "max_distance_km": 847.452,
+      "median_distance_km": 13.7715,
+      "p75_distance_km": 56.44,
+      "p90_distance_km": 124.54260000000002,
+      "p95_distance_km": 175.17575,
+      "n_same_municipality": 782,
+      "n_outside_municipality": 952,
+      "n_same_state": 1626,
+      "n_outside_state": 108,
+      "n_active_od_pairs": 784,
+      "n_used_providers": 156,
+      "n_providers": 158,
+      "pct_same_municipality": 45.09803921568628,
+      "pct_outside_municipality": 54.90196078431372,
+      "pct_same_state": 93.77162629757785,
+      "pct_outside_state": 6.228373702422146
+    },
+    "comparison": {
+      "baseline_total_distance_km": 104287.02600000001,
+      "baseline_mean_distance_km": 60.142460207612466,
+      "absolute_distance_reduction_km": 30136.762000000017,
+      "mean_distance_reduction_km": 17.379908881199547,
+      "distance_reduction_pct": 28.897901451327236,
+      "mean_distance_reduction_pct": 28.897901451327233
+    }
+  },
+  "outputs": {
+    "results/scenario_1_2026_first_half.csv": "6e2f295965da6533b7e91a0ddde75ee9536ceee375b25ced87c62dcf365f01ba",
+    "docs/national_comparison_2026_first_half.pdf": "ac487c1de0a1468c18626eb0bc9a7650ebbe454ca3d6c790bf51ba7582601203",
+    "docs/provider_increase_2026_first_half.pdf": "3c6f7b93bbf9138e7afa341b025d18518bcc5b8ebad8c66437229461219af117",
+    "docs/provider_percentage_increase_2026_first_half.pdf": "7021ce2a8ce2f590203c7bb3b276b571419735f7390fb82cdcb8a40486cb6d54",
+    "docs/provider_distance_savings_2026_first_half.pdf": "ae136dafde8f6d213445a310e2cf09e4c727548d032bb5490d1b373f0c744be8",
+    "docs/cases_bahia_2026_first_half.pdf": "501583256aeee22a7b4324cb632cc0ad2e937de24910db371b74a2be3e5d4965",
+    "docs/cases_minas_bahia_2026_first_half.pdf": "ce89a9928b6c79b2d03bd96ea39149407e0cd1de66805604ad3a0a4082be749c",
+    "docs/top4_flow_distance_maps_2026_first_half.pdf": "7c14273384325b482d23b50b1c00ba7e8e923f73ef2e00616cd4074915cf3229",
+    "docs/top4_flow_weighted_maps_2026_first_half.pdf": "b053703dd295e6f6c2515140901f869af05ee8806608094cc2d82b1e51bef8eb",
+    "docs/new_cross_state_cases_2026_first_half.pdf": "7955e350445791fca16be42bd3dc5eea54c8fd95969085ea88dabd53c418b478",
+    "docs/ma_pa_observed_vs_nearest_provider_2026_first_half.pdf": "2a50457c0f3718e4de18e900486b36ff23631a29145b847a786fa8021d4c957f"
+  }
+}
