@@ -1,0 +1,28 @@
+{
+  "scope_filters": {
+    "brazil": "observed_flow > 0"
+  },
+  "inputs": {
+    "data/origin_destination_data_2026_first_half.csv": "0c69821cc3597f769565b709f0786b864136a290bc05ac7e5dda66de5e4d5b84",
+    "data/municipal_data_2026_first_half.csv": "a2a7d47016fbcf9526363099bf22de3d3fa1656c1330ed79cc12b22e4d6cd146"
+  },
+  "metrics": {
+    "brazil": {
+      "n_admissions": 1734,
+      "n_observed_od_pairs": 826,
+      "n_origins": 784,
+      "n_destinations": 158,
+      "total_distance_km": 104287.03,
+      "mean_distance_km": 60.14,
+      "max_distance_km": 2179.91,
+      "median_distance_km": 20.55,
+      "p75_distance_km": 69.57,
+      "p90_distance_km": 173.45,
+      "p95_distance_km": 256.48,
+      "n_same_municipality": 748,
+      "n_outside_municipality": 986,
+      "n_same_state": 1717,
+      "n_outside_state": 17
+    }
+  }
+}
