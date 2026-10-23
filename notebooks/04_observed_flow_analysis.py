@@ -156,18 +156,24 @@ def _(BARRETOS, flow_metrics, observed, pd):
         "barretos"          : barretos         ,
         "barretos_external" : barretos_external,
     }
+
+    metric  = {
+        "brazil" : flow_metrics(observed),
+    }
     metrics = {
-        "brazil"   : flow_metrics(observed),
+        **metric,
+
         "amazonas" : flow_metrics(scopes["amazonas"]),
         "para"     : flow_metrics(scopes["para"    ]),
     }
 
+
     summary = pd.DataFrame(
-        { "brazil" : flow_metrics(observed) },
+        metric,
     ).T.rename_axis("scope")
 
     summary.T.head()
-    return metrics, scopes, top_barretos
+    return metric, metrics, scopes, top_barretos
 
 
 @app.cell
@@ -177,7 +183,7 @@ def _(
     OD,
     ROOT,
     json,
-    metrics,
+    metric,
     mo,
     municipal_bytes,
     od_bytes,
@@ -188,12 +194,12 @@ def _(
             "brazil" : "observed_flow > 0",
         },
 
-        "inputs": {
+        "inputs" : {
             OD       .relative_to(ROOT).as_posix() : sha256(od_bytes       ).hexdigest(),
             MUNICIPAL.relative_to(ROOT).as_posix() : sha256(municipal_bytes).hexdigest(),
         },
 
-        "metrics": metrics,
+        "metrics" : metric,
     }
 
 
