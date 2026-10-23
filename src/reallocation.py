@@ -11,11 +11,7 @@ from io      import BytesIO
 import numpy  as np
 import pandas as pd
 
-from src.municipal import flow_metrics
-from src.municipal import OD_COLUMNS       , \
-                          STATE_CODES      , \
-                          COUNT_COLUMNS    , \
-                          MUNICIPAL_COLUMNS
+from src.municipal import COUNT_COLUMNS, flow_metrics
 
 
 KEYS = [
@@ -126,31 +122,11 @@ def route_audit(od):
 
     unavailable = ~_available_routes(od)
 
-    observed    = od["observed_flow"].gt(0)
-
-    missing_observed = observed & od[
-        [
-            "distance_km"    ,
-            "travel_time_min",
-        ]
-    ].isna().any(axis=1)
-
-    available_origins = od.loc[~unavailable, "origin_code"].unique()
-
     return {
         "n_od_pairs" : len(od),
 
         "n_available_pairs"   : int((~unavailable).sum()),
         "n_unavailable_pairs" : int(  unavailable .sum()),
-
-        "n_origins_without_alternative" : int(
-            od.loc[~od["origin_code"].isin(available_origins), "origin_code"].nunique()
-        ),
-
-        "n_observed_pairs_missing_measures"      : int(missing_observed.sum()),
-        "n_observed_admissions_missing_measures" : int(
-            od.loc[missing_observed, "observed_flow"].sum()
-        ),
 
         "route_status_counts": {
             str(status) : int(count)
@@ -194,46 +170,12 @@ def load_inputs(od_path, municipal_path):
         ) | dict.fromkeys(COUNT_COLUMNS, "int64"),
     )
 
-    if list(od.columns) != OD_COLUMNS or list(municipal.columns) != MUNICIPAL_COLUMNS:
-        raise ValueError("Inputs must use the current municipal and OD CSV schemas.")
-
     _validate_routes(od)
 
     if municipal.empty or municipal.isna().any().any():
         raise ValueError("Empty or incomplete municipal table.")
 
-    if not municipal["municipality_code"].str.fullmatch(r"[0-9]{7}").all():
-        raise ValueError("Invalid municipal IBGE identifier.")
-
     municipal = municipal.set_index("municipality_code", verify_integrity=True).sort_index()
-
-    if (
-        not municipal["state_code"  ].isin(STATE_CODES                             ).all() or
-        not municipal["state_code"  ].eq  (municipal.index.str[:2]                 ).all() or
-        not municipal["state"       ].eq  (municipal["state_code"].map(STATE_CODES)).all() or
-            municipal["municipality"].str.strip().eq("").any()
-    ):
-        raise ValueError("Inconsistent municipality name or state.")
-
-    for column in COUNT_COLUMNS:
-        _integer_counts(municipal[column], column)
-
-    coordinates = municipal[["latitude", "longitude"]].to_numpy(dtype=float)
-
-    if (
-        not np.isfinite(coordinates)                 .all() or
-        not municipal["latitude" ].between(-90 , 90 ).all() or
-        not municipal["longitude"].between(-180, 180).all()
-    ):
-        raise ValueError("Invalid municipal coordinates.")
-
-    if (
-            municipal["local_care"].gt(municipal[["demand", "observed_supply"]].min(axis=1)).any() or
-            municipal["hospitals" ].gt(municipal["observed_supply"]                        ).any() or
-        not municipal["hospitals" ].gt(0).eq(municipal["observed_supply"].gt(0)            ).all() or
-        not municipal[["demand", "observed_supply"]].sum(axis=1).gt(0)                      .all()
-    ):
-        raise ValueError("Inconsistent municipal counts.")
 
     origins   = municipal.index[municipal["demand"         ].gt(0)]
     providers = municipal.index[municipal["observed_supply"].gt(0)]
@@ -286,9 +228,6 @@ def observed_baseline(od):
     _validate_routes(od)
 
     observed = od.loc[od["observed_flow"].gt(0)].copy()
-
-    if observed.empty or observed[["distance_km", "travel_time_min"]].isna().any().any():
-        raise ValueError("Observed baseline is empty or has missing route measures.")
 
     observed["same_municipality"] = observed["origin_code"  ].eq(observed["destination_code"])
     observed["total_distance_km"] = observed["observed_flow"] *  observed["distance_km"     ]
