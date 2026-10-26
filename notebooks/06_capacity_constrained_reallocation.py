@@ -318,9 +318,6 @@ def _(find_elbow, n_admissions, np, scenario_metrics):
         sensitivity.total_distance_km,
     )
 
-    sensitivity["elbow_score"] = _scores
-    sensitivity["is_elbow"   ] = sensitivity.index == elbow_index
-
     elbow = None if elbow_index is None else sensitivity.loc[elbow_index]
     return elbow, elbow_index, sensitivity
 
@@ -393,7 +390,6 @@ def _(elbow, elbow_index, mo, sensitivity):
                     "total_capacity"     ,
                     "mean_distance_km"   ,
                     "cumulative_gain_pct",
-                    "is_elbow"           ,
                 ]
             ].round(3),
 
@@ -571,8 +567,32 @@ def _(
     for _path in output_paths.values():
         _path.parent.mkdir(parents=True, exist_ok=True)
 
-    flows     .to_csv(output_paths["flows"     ], index=False, encoding="utf-8-sig")
-    comparison.to_csv(output_paths["comparison"], index=False, encoding="utf-8-sig")
+
+    flows.to_csv(
+        output_paths["flows"],
+
+        index   =False      ,
+        encoding="utf-8-sig",
+    )
+
+    _comparison_csv = comparison.drop(
+        columns=[
+            "max_interstate_admissions"   ,
+            "interstate_constraint_active",
+        ]
+    ).astype({
+        "n_saturated_providers" : "Int64",
+        "interstate_admissions" : "Int64",
+        "capacity_increment"    : "Int64",
+    })
+
+    _comparison_csv.to_csv(
+        output_paths["comparison"],
+
+        index       =False,
+        encoding    ="utf-8-sig",
+        float_format="%.2f"     ,
+    )
 
     for _key, _figure in (
         ("mean_distance_figure", mean_distance_fig),
