@@ -99,10 +99,6 @@ def validate_solution(
     )
 
     return {
-        "max_demand_residual"   : demand_residual         ,
-        "max_integrality_error" : float(integrality_error),
-        "max_capacity_excess"   : capacity_excess if check_capacity else None,
-
         "objective_error_km" : abs(reconstructed - objective),
 
         "n_saturated_providers" : (
