@@ -1,8 +1,8 @@
-"""Scenario assumptions, independent of the transportation formulation."""
+"""Scenario assumptions, independent of the transportation formulation"""
 
 from decimal     import Decimal
+from math        import isfinite
 from dataclasses import dataclass
-from math        import isfinite, floor
 
 
 @dataclass(frozen=True)
@@ -21,19 +21,15 @@ class TransportScenario:
                 not 0 <=     self.max_interstate_share <= 1
             )
         ):
-            raise ValueError(
-                "Maximum interstate share must be finite and between zero and one."
-            )
+            raise ValueError("Maximum interstate share must be finite and between zero and one.")
 
     def capacity(self, observed_supply: int) -> int:
-        return floor(
-            (Decimal(1) + Decimal(str(self.slack))) * observed_supply
-        )
+        return int((Decimal(1) + Decimal(str(self.slack))) * observed_supply)
 
     def interstate_limit(self, total_admissions: int) -> int | None:
         if self.max_interstate_share is None:
             return None
 
-        return floor(
+        return int(
             Decimal(str(self.max_interstate_share)) * total_admissions
         )
