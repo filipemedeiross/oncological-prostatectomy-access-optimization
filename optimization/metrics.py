@@ -1,4 +1,4 @@
-"""Admission-weighted metrics, using the definitions from notebooks 6-8"""
+"""Admission-weighted metrics evaluated with original distances"""
 
 import numpy as np
 
@@ -12,14 +12,7 @@ def flow_metrics(solution, observed_total):
         solution.allocated_flow.to_numpy(dtype="int64"),
     )
     quantiles = np.percentile(
-        distances,
-        [
-            50,
-            75,
-            90,
-            95,
-        ],
-        method="linear",
+        distances, [50, 75, 90, 95], method="linear"
     )
 
     metrics = {
