@@ -1,0 +1,1 @@
+"""Mathematical formulations, kept separate from solver execution."""
