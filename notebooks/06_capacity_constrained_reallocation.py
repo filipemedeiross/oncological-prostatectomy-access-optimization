@@ -568,7 +568,9 @@ def _(
         _path.parent.mkdir(parents=True, exist_ok=True)
 
 
-    flows.to_csv(
+    flows.drop(
+        columns=["model_distance_km"]
+    ).to_csv(
         output_paths["flows"],
 
         index   =False      ,
@@ -577,6 +579,7 @@ def _(
 
     _comparison_csv = comparison.drop(
         columns=[
+            "n_admissions"                ,
             "max_interstate_admissions"   ,
             "interstate_constraint_active",
         ]

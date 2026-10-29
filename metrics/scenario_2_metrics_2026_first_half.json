@@ -1,6 +1,6 @@
 {
   "scenario": 2,
-  "generated_at_utc": "2026-10-26T21:49:55+00:00",
+  "generated_at_utc": "2026-10-29T13:52:06+00:00",
   "slacks": [
     0.0,
     0.01,
@@ -45,8 +45,8 @@
     1.0
   ],
   "outputs": {
-    "results/scenario_2_capacity_constrained_2026_first_half.csv": "e218343a54380ba53b0266e130a87c030867cd1c49d7b2097b4aeb590c6c8fc5",
-    "metrics/scenario_2_capacity_constrained_comparison_2026_first_half.csv": "845761a4b9ef6a61855951cbd4811dfb5c8e8fb795ca926b005805220680172c",
+    "results/scenario_2_capacity_constrained_2026_first_half.csv": "4f3af78674d08e153e4e8fd4146a619c308c009e178023cb7fd8af61ccba7360",
+    "metrics/scenario_2_capacity_constrained_comparison_2026_first_half.csv": "2262df5c9e17af78dd278ddc588032cdd6fdf1fcf1c5cb2b32f6e9222ec13246",
     "docs/capacity_expansion_mean_distance_2026_first_half.pdf": "5d0b2f2ad3bf85d681d495b8661911fbbd005b9479f58463d1acd17fe783f07a",
     "docs/capacity_expansion_elbow_2026_first_half.pdf": "d6021e5a5d86e4aca653c23c0268a14d3cdc89dbb4bd2e475b4d22040e39c73c"
   }
