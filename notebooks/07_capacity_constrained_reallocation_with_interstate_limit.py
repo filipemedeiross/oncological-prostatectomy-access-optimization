@@ -199,7 +199,6 @@ def _(
     return (
         data,
         distances,
-        input_paths,
         n_admissions,
         nearest,
         nearest_objective,
@@ -718,18 +717,16 @@ def _(
     ROOT,
     SLACKS,
     comparison,
-    data,
     datetime,
     flows,
-    grid_summary,
     heatmap_figures,
-    input_paths,
     json,
     sha256,
     timezone,
     tradeoff_fig,
 ):
     _prefix  = "scenario_3_interstate_constrained"
+
     _figures = {
         **heatmap_figures,
 
@@ -750,7 +747,14 @@ def _(
     for _path in output_paths.values():
         _path.parent.mkdir(parents=True, exist_ok=True)
 
-    flows.to_csv(output_paths["flows"], index=False, encoding="utf-8-sig")
+    flows.drop(
+        columns=["model_distance_km"]
+    ).to_csv(
+        output_paths["flows"],
+
+        index   =False      ,
+        encoding="utf-8-sig",
+    )
 
     _counts = [
         "n_admissions"          ,
@@ -765,7 +769,24 @@ def _(
 
     _comparison_csv = comparison.astype(dict.fromkeys(_counts, "Int64"))
 
-    _comparison_csv["max_interstate_share"] = comparison.max_interstate_share.map("{:.4f}".format)
+    _comparison_csv["max_interstate_share"] = comparison.max_interstate_share.map("{:.3f}".format)
+
+    _comparison_csv.drop  (
+        columns=[
+            "solver_status",
+            "feasible"     ,
+            "n_admissions" ,
+        ],
+
+        inplace=True,
+    )
+    _comparison_csv.drop(
+        index  =_comparison_csv.index[
+            ~comparison["feasible"]
+        ],
+
+        inplace=True,
+    )
 
     _comparison_csv.to_csv(
         output_paths["comparison"],
@@ -794,20 +815,6 @@ def _(
         "max_interstate_shares" : list(MAX_INTERSTATE_SHARES),
         "n_feasible"            : int(  comparison.feasible .sum()),
         "n_infeasible"          : int((~comparison.feasible).sum()),
-
-        "grid_validation" : grid_summary,
-
-        "source_sha256" : {
-            **{
-                f"data/{name}" : digest
-                for name, digest in data.source_hashes.items()
-            },
-
-            **{
-                str(path.relative_to(ROOT)) : sha256(path.read_bytes()).hexdigest()
-               for path in input_paths.values()
-            },
-        },
 
         "outputs" : {
             str(path.relative_to(ROOT)) : sha256(path.read_bytes()).hexdigest()
