@@ -1,6 +1,6 @@
 {
   "scenario": 3,
-  "generated_at_utc": "2026-10-29T13:19:30+00:00",
+  "generated_at_utc": "2026-10-29T14:30:45+00:00",
   "slacks": [
     0.0,
     0.05,
@@ -18,17 +18,9 @@
   ],
   "n_feasible": 27,
   "n_infeasible": 3,
-  "grid_validation": "27 optimal · 3 infeasible · grid checks passed.",
-  "source_sha256": {
-    "data/telesurgery_2026_first_half.txt": "3b054cd46ff82eafc02039b71d00b6cef4445272bb21f5e3991028c0d66afebc",
-    "data/origin_destination_data_2026_first_half.csv": "0c69821cc3597f769565b709f0786b864136a290bc05ac7e5dda66de5e4d5b84",
-    "results/scenario_1_2026_first_half.csv": "6e2f295965da6533b7e91a0ddde75ee9536ceee375b25ced87c62dcf365f01ba",
-    "metrics/scenario_2_capacity_constrained_comparison_2026_first_half.csv": "845761a4b9ef6a61855951cbd4811dfb5c8e8fb795ca926b005805220680172c",
-    "metrics/scenario_2_metrics_2026_first_half.json": "47315979c8e0adfc5bf7ca8c5f48014bfe8ff812b01564dfd183c0d7ab4f783c"
-  },
   "outputs": {
-    "results/scenario_3_interstate_constrained_2026_first_half.csv": "c01006790bf9177dc5b1d02886859d49f627327741a7cd7bec7f996963aba008",
-    "metrics/scenario_3_interstate_constrained_comparison_2026_first_half.csv": "407227df371a4fcba60da6747cbe27c746cc05483311ccaa0ae22b090a433e7b",
+    "results/scenario_3_interstate_constrained_2026_first_half.csv": "441fd8bdefc8c78b3ce9de9ba66f24967fe34b1ef4302ca0c58a3d1499f9c503",
+    "metrics/scenario_3_interstate_constrained_comparison_2026_first_half.csv": "9434e2a520f5a6d9e8dda9c802319ed920bd633c56097c9ad4c39fb376e648dc",
     "docs/scenario_3_mean_distance_heatmap_2026_first_half.pdf": "6c2599655f20307c71fbb15d2cff172018678f9fda6366113de2786847e45f7a",
     "docs/scenario_3_max_distance_heatmap_2026_first_half.pdf": "0e86cf32377f1bc8a15cee2e4350e16ddadf1fd3ddfce752a31be9ccf9ce0275",
     "docs/scenario_3_interstate_share_heatmap_2026_first_half.pdf": "decbff7ade8e4c6e93580eb4e4a263276fecc57c4192384cdad54b13a9290083",
