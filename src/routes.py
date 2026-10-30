@@ -30,6 +30,7 @@ ROUTE_POLICY_VERSION = "saldanha_2024_proxies_v1"
 PROXIES = {
     "1504752" : "1506807",  # Mojuí dos Campos -> Santarém
     "1304203" : "1300029",  # Tefé             -> Alvarães
+    "1300300" : "1301100",  # Autazes          -> Careiro
 }
 
 SPECIFIC_ROUTE = {
