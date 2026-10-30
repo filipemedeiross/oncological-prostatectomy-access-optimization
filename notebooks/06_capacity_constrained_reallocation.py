@@ -107,7 +107,7 @@ def _(mo):
     \sum_i x_{ij}\leq\lfloor(1+s)U_j^{obs}\rfloor,\qquad x_{ij}\geq0.
     $$
 
-    The compact instance supplies demand, production and **rounded integer kilometres** $\tilde d_{ij}=\lfloor d_{ij}\rfloor$. The transportation LP has integral margins; HiGHS simplex yields an integral basic solution, checked before export.
+    The compact instance supplies demand, production and **rounded integer kilometres** $\tilde d_{ij}=\operatorname{rint}(d_{ij})$ (round half to even). The transportation LP has integral margins; HiGHS simplex yields an integral basic solution, checked before export.
     """)
     return
 
