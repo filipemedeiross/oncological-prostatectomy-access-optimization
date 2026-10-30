@@ -619,15 +619,13 @@ def run_history(
 def export_history(result, root):
     """Explicitly publish two consolidated tables, a manifest and one HTML report"""
 
-    root = Path(root)
-    tag  = result.directory.name
-
-    folder = root / "metrics/history" / tag
+    root   = Path(root)
+    folder = root / "metrics/"
 
     write_csv(result.annual , folder / "annual_statistics.csv" )
     write_csv(result.summary, folder / "summary_statistics.csv")
 
-    report = root / "reports" / f"history_{tag}.html"
+    report = root / "reports" / f"history.html"
 
     report.parent.mkdir(parents=True, exist_ok=True)
 
