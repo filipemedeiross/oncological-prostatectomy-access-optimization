@@ -31,6 +31,7 @@ PROXIES = {
     "1504752" : "1506807",  # Mojuí dos Campos -> Santarém
     "1304203" : "1300029",  # Tefé             -> Alvarães
     "1300300" : "1301100",  # Autazes          -> Careiro
+    "4220000" : "4207007",  # Balneário Rincão -> Içara
 }
 
 SPECIFIC_ROUTE = {

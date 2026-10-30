@@ -158,11 +158,13 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    Only when the original estimate is unavailable do we substitute the corresponding proxy–destination pair: **Mojuí dos Campos/PA → Santarém/PA**, **Tefé/AM → Alvarães/AM**, and **Autazes/AM → Careiro/AM**. This operation preserves the original origin and destination, flow, and `same_state`.
+    Only when the original estimate is unavailable do we substitute the corresponding proxy–destination pair: **Mojuí dos Campos/PA → Santarém/PA**, **Tefé/AM → Alvarães/AM**, **Autazes/AM → Careiro/AM**, and **Balneário Rincão/SC → Içara/SC**. This operation preserves the original origin and destination, flow, and `same_state`.
 
     The Tefé proxy is a limited approximation: the [Municipality of Alvarães](https://alvaraes.am.gov.br/2026/08/transporte-universitario-tefe-novos-horarios/) documents bus transportation to Nogueira and boat transportation between Nogueira and Tefé. Using Alvarães as a proxy does not account for the river crossing, transfers, or waiting times and does not represent patients' actual travel.
 
     The Autazes proxy is a territorial approximation based on the AM-254/BR-319 connection documented by the [Government of Amazonas](https://www.agenciaamazonas.am.gov.br/noticias/governador-wilson-lima-assina-ordens-de-servico-para-recuperacao-da-am-254-e-obras-do-sistema-viario-em-autazes/). The [DPE-AM](https://defensoria.am.def.br/2024/05/06/dpe-am-investiga-interrupcao-do-transporte-escolar-para-alunos-da-zona-rural-de-careiro-castanho/) also identifies stretches of the Estrada de Autazes in rural Careiro in May 2024. Using Careiro–destination estimates does not add access from Autazes to the proxy network or account for differences in crossings, transfers, and waiting times; it does not represent patients' actual travel. Both sources were accessed on **October 30, 2026**; distances and times still come from the May 2024 Saldanha matrix.
+
+    The Balneário Rincão proxy is a territorial approximation based on its separation from Içara under [Santa Catarina Law 12,668/2003](https://leis.alesc.sc.gov.br/ato-normativo/14324) and the SC-445 connection documented by the [Municipality of Içara in March 2024](https://www.icara.sc.gov.br/noticias/noticia?post=defesa-civil-de-icara-interdita-trecho-da-sc-445-no-sentido-a-balneario-rincao-25755). Using Içara–destination estimates excludes access from Balneário Rincão to the proxy network and local route differences; it does not represent patients' actual travel. Both sources were accessed on **October 30, 2026**; distances and times still come from the May 2024 Saldanha matrix.
 
     **Mojuí dos Campos → Santarém is not assigned the proxy's zero diagonal distance.** For this specific pair, we use **33.3 km and 30 minutes by car**, according to [Rome2Rio, Mojuí dos Campos → Santarém](https://www.rome2rio.com/s/Moju%C3%AD-dos-Campos/Santar%C3%A9m), accessed on **October 22, 2026**.
     """)
