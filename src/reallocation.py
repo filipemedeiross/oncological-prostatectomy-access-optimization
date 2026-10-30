@@ -11,7 +11,8 @@ from io      import BytesIO
 import numpy  as np
 import pandas as pd
 
-from src.municipal import COUNT_COLUMNS, flow_metrics
+from src.municipal import flow_metrics   , COUNT_COLUMNS
+from src.routes    import ABSENT_STATUSES, PENDING_STATUSES, RESOLVED_STATUSES
 
 
 KEYS = [
@@ -20,10 +21,6 @@ KEYS = [
 ]
 
 ATOL = 1e-6
-
-RESOLVED_STATUSES = {"ok"                  , "intramunicipal"    , "proxy_imputed", "specific_estimate"}
-ABSENT_STATUSES   = {"municipality_missing", "pair_missing"      , "no_route"     }
-PENDING_STATUSES  = {"estimate_missing"    , "proxy_self_pending"}
 
 
 def _integer_counts(values, name, *, positive=False):
@@ -224,7 +221,15 @@ def observed_baseline(od):
 
     _validate_routes(od)
 
-    observed = od.loc[od["observed_flow"].gt(0)].copy()
+    observed    = od.loc[od["observed_flow"].gt(0)].copy()
+    unavailable = ~_available_routes(observed)
+
+    if unavailable.any():
+        pairs = observed.loc[
+            unavailable, KEYS + ["route_status"]
+        ].to_dict("records")
+
+        raise ValueError(f"Observed admissions have unavailable route estimates: {pairs}")
 
     observed["same_municipality"] = observed["origin_code"  ].eq(observed["destination_code"])
     observed["total_distance_km"] = observed["observed_flow"] *  observed["distance_km"     ]
