@@ -22,8 +22,8 @@ KEYS = [
 
 SCENARIOS = {
     "observed" : ("Observado"     , None                     ),
-    "s3_0102"  : ("S3 (0%; 1,00%)", TransportScenario(0, 0.01)),
-    "s3_0200"  : ("S3 (0%; 2,00%)", TransportScenario(0, 0.02)),
+    "s3_010"   : ("S3 (0%; 1,00%)", TransportScenario(0, 0.01)),
+    "s3_020"   : ("S3 (0%; 2,00%)", TransportScenario(0, 0.02)),
     "s2_0"     : ("S2 (0%)"       , TransportScenario(0      )),
     "s2_5"     : ("S2 (5%)"       , TransportScenario(0.05   )),
     "s2_10"    : ("S2 (10%)"      , TransportScenario(0.1    )),
