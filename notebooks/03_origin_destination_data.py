@@ -58,11 +58,8 @@ def _(Path, sys):
 
 @app.cell
 def _():
-    from src.distances import (
-        DEFAULT_PARQUET_PATH,
-
-        query_distances,
-    )
+    from src.distances import DEFAULT_PARQUET_PATH, query_distances
+    from src.routes    import SPECIFIC_ROUTE      , resolve_routes , route_policy
 
     from src.municipal import (
         OD_COLUMNS,
@@ -79,10 +76,13 @@ def _():
     return (
         DEFAULT_PARQUET_PATH,
         OD_COLUMNS,
+        SPECIFIC_ROUTE,
         complete_od,
         query_distances,
         read_admissions,
         read_municipal,
+        resolve_routes,
+        route_policy,
         validate_od,
         write_csv,
     )
@@ -168,81 +168,8 @@ def _(mo):
 
 
 @app.cell
-def _():
-    PROXIES = {
-        "1504752" : "1506807",
-        "1304203" : "1300029",
-    }
-
-    SPECIFIC_ROUTE = {
-        "origin_code"      : "1504752",
-        "destination_code" : "1506807",
-
-        "distance_km"     : 33.3,
-        "travel_time_min" : 30.0,
-
-        "source"      : "https://www.rome2rio.com/s/Moju%C3%AD-dos-Campos/Santar%C3%A9m",
-        "accessed_on" : "2026-10-22",
-        "mode"        : "car"       ,
-    }
-    return PROXIES, SPECIFIC_ROUTE
-
-
-@app.cell
-def _(
-    DEFAULT_PARQUET_PATH,
-    PROXIES,
-    SPECIFIC_ROUTE,
-    pd,
-    query_distances,
-    raw_od,
-):
-    od = raw_od.copy()
-
-    _pending  = ~od    ["route_status"].isin(["ok", "intramunicipal"])
-    _selected =  od.loc[_pending & od["origin_code"].isin(PROXIES)].copy()
-
-    _requests = _selected[["origin_code", "destination_code"]].assign(
-        origin_code=_selected["origin_code"].map(PROXIES),
-    )
-
-    _routes = query_distances(_requests, DEFAULT_PARQUET_PATH).set_axis(_selected.index)
-
-    proxy_audit = pd.concat([
-        _selected.rename(columns={
-            "route_status"    : "original_status"         ,
-            "distance_km"     : "original_distance_km"    ,
-            "travel_time_min" : "original_travel_time_min",
-        }),
-
-        _routes.drop(columns="destination_code").add_prefix("proxy_"),
-    ], axis=1)
-
-    _usable  = _routes      ["route_status"].eq("ok")
-    _indices = _routes.index[_usable]
-
-    _measures = ["distance_km", "travel_time_min"]
-
-    od.loc[_indices, _measures     ] = _routes.loc[_indices, _measures]
-    od.loc[_indices, "route_status"] = "proxy_imputed"
-
-    _self_proxy = _routes["origin_code"].eq(_routes["destination_code"])
-
-    od.loc[_routes.index[_self_proxy], "route_status"] = "proxy_self_pending"
-
-    _specific = (
-        _pending &
-
-        od["origin_code"     ].eq(SPECIFIC_ROUTE["origin_code"     ]) &
-        od["destination_code"].eq(SPECIFIC_ROUTE["destination_code"])
-    )
-
-    od.loc[_specific, _measures     ] = [SPECIFIC_ROUTE[field] for field in _measures]
-    od.loc[_specific, "route_status"] = "specific_estimate"
-
-    proxy_audit[_measures + ["route_status"]] = od.loc[proxy_audit.index, _measures + ["route_status"]]
-
-    proxy_audit = proxy_audit.reset_index(drop=True)
+def _(DEFAULT_PARQUET_PATH, raw_od, resolve_routes):
+    od, proxy_audit = resolve_routes(raw_od, DEFAULT_PARQUET_PATH)
     return od, proxy_audit
 
 
@@ -286,8 +213,7 @@ def _():
 @app.cell
 def _(OUTPUT, admissions, municipal, od, validate_od, write_csv):
     validate_od(od, municipal, admissions)
-
-    write_csv  (od, OUTPUT)
+    write_csv  (od, OUTPUT   )
 
     pending_od   = od.loc[od[["distance_km", "travel_time_min"]].isna().any(axis=1)]
     validated_od = od
@@ -349,6 +275,7 @@ def _(
     SPECIFIC_ROUTE,
     json,
     mo,
+    route_policy,
     sha256,
 ):
     _metadata = {
@@ -363,6 +290,7 @@ def _(
         "symmetric_source" : True ,
 
         "specific_estimate" : SPECIFIC_ROUTE,
+        "route_policy"      : route_policy(),
     }
 
 
@@ -417,11 +345,17 @@ def _(municipal, np, validated_od):
 
     _values  = matrix.to_numpy(dtype=float)
 
-    _missing = int(
-        (~np.isfinite(_values)).sum()
-    )
+    if not np.isfinite(_values).all():
+        raise ValueError("The compact instance requires a finite distance for every OD pair.")
+
+    _local = instance_origins.index.to_numpy()[:, None] == instance_candidates.index.to_numpy()[None, :]
+    if not (_values[_local] == 0).all() or (_values[~_local] <= 0).any():
+        raise ValueError("Only intramunicipal distances may be zero in the original OD matrix.")
 
     _rounded = np.rint(_values)
+
+    if (_rounded < 0).any() or (_rounded > np.iinfo(np.uint16).max).any():
+        raise ValueError("Rounded distances exceed the compact instance's uint16 range.")
 
     distance_matrix = _rounded.astype(np.uint16)
     return distance_matrix, instance_candidates, instance_origins, n_i, n_j
