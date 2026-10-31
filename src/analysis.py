@@ -8,6 +8,7 @@ import pandas as pd
 from pathlib            import Path
 from html               import escape
 from importlib.metadata import version
+from copy               import deepcopy
 from dataclasses        import dataclass
 from tempfile           import NamedTemporaryFile
 
@@ -616,14 +617,81 @@ def run_history(
     )
 
 
+def _annual_statistics_export(annual):
+    """Format annual CSV columns while preserving unavailable scenario metrics"""
+
+    counts = [
+        "n_admissions"          ,
+        "n_active_od_pairs"     ,
+        "n_same_municipality"   ,
+        "n_outside_municipality",
+        "n_same_state"          ,
+        "n_outside_state"       ,
+        "n_saturated_providers" ,
+        "interstate_admissions" ,
+    ]
+
+    decimals = [
+        "total_distance_km"       ,
+        "mean_distance_km"        ,
+        "max_distance_km"         ,
+        "distance_reduction_pct"  ,
+        "median_distance_km"      ,
+        "p75_distance_km"         ,
+        "p90_distance_km"         ,
+        "p95_distance_km"         ,
+        "pct_same_municipality"   ,
+        "pct_outside_municipality",
+        "pct_same_state"          ,
+        "pct_outside_state"       ,
+        "absolute_gain_km"        ,
+        "transport_tco2e"         ,
+        "avoided_tco2e"           ,
+    ]
+
+    table = annual.drop(columns="potential_value").copy()
+
+    table[counts  ] = table[counts  ].astype("Int64")
+    table[decimals] = table[decimals].round (2).map("{:.2f}".format, na_action="ignore")
+
+    return table
+
+
+def _summary_statistics_export(summary):
+    """Format summary CSV columns while preserving incomplete scenario metrics"""
+
+    decimals = [
+        "pct_outside_state"    ,
+        "pct_same_municipality",
+        "pct_same_state"       ,
+        "total_distance_km"    ,
+        "transport_tco2e"      ,
+        "avoided_tco2e"        ,
+    ]
+
+    table = summary.drop(columns="potential_value").copy()
+
+    table[decimals] = (
+        table[decimals]
+        .round(2)
+        .map  (
+            "{:.2f}".format,
+
+            na_action="ignore",
+        )
+    )
+
+    return table
+
+
 def export_history(result, root):
     """Explicitly publish two consolidated tables, a manifest and one HTML report"""
 
     root   = Path(root)
     folder = root / "metrics/"
 
-    write_csv(result.annual , folder / "annual_statistics.csv" )
-    write_csv(result.summary, folder / "summary_statistics.csv")
+    write_csv(_annual_statistics_export (result.annual ), folder / "annual_statistics.csv" )
+    write_csv(_summary_statistics_export(result.summary), folder / "summary_statistics.csv")
 
     report = root / "reports" / f"history.html"
 
@@ -647,16 +715,34 @@ def export_history(result, root):
 
     report.write_text(content, encoding="utf-8")
 
-    manifest = result.manifest | {
-        "cache_directory" : str(result.directory),
-        "export_sha256"   : {
-            path.relative_to(root).as_posix() : _digest(path)
-            for path in (
-                folder / "annual_statistics.csv" ,
-                folder / "summary_statistics.csv",
-                report,
-            )
-        }
+    manifest = deepcopy(result.manifest)
+
+    for key in (
+        "code_sha256"    ,
+        "output_sha256"  ,
+        "cache_directory",
+    ):
+        manifest.pop(key, None)
+
+    source = manifest.get("source", {})
+
+    for key in (
+        "source_catalog"         ,
+        "excluded_municipalities",
+    ):
+        source.pop(key, None)
+
+    source.get("selection", {}).pop("processing_coverage", None)
+
+    manifest["export_sha256"] = {
+        path.relative_to(root).as_posix() : _digest(path)
+
+        for path in (
+            folder / "annual_statistics.csv" ,
+            folder / "summary_statistics.csv",
+
+            report,
+        )
     }
 
     _write_json(manifest, folder / "manifest.json")
