@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "years": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "procedures": [
+    "0416010121"
+  ],
+  "admissions_sha256": "316fdfa7e9e16c02c305ff0c550570eaec21f5ff87f8dfe8963b32444301b92a",
+  "municipal_sha256": "59f6e7941231151558ad5e7027296675f43bdd86a490c9d676e733c3588c2250",
+  "distance": {
+    "method": "saldanha",
+    "network_reference": "2024-05",
+    "source": "https://zenodo.org/records/11400243",
+    "parquet_sha256": "aedea97717df66f3189cc9a3fa8fea73823d5b89def7684af55a4370ecc73e86",
+    "distance_unit": "km",
+    "duration_unit": "min",
+    "symmetric_source": true,
+    "model_rounding": "numpy.rint (half to even)",
+    "evaluation": "original unrounded distance_km",
+    "route_policy": {
+      "version": "saldanha_2024_proxies_v1",
+      "source": "https://zenodo.org/records/11400243",
+      "reference_network": "May 2024",
+      "distance_unit": "km",
+      "duration_unit": "min",
+      "symmetric_source": true,
+      "intramunicipal_km": 0,
+      "proxy_scope": "unavailable original estimates; origin substitution only",
+      "proxies": {
+        "1504752": "1506807",
+        "1304203": "1300029",
+        "1300300": "1301100",
+        "4220000": "4207007"
+      },
+      "specific_estimate": {
+        "origin_code": "1504752",
+        "destination_code": "1506807",
+        "distance_km": 33.3,
+        "travel_time_min": 30.0,
+        "mode": "car",
+        "accessed_on": "2026-10-22",
+        "source": "https://www.rome2rio.com/s/Moju%C3%AD-dos-Campos/Santar%C3%A9m"
+      }
+    }
+  },
+  "source": {
+    "selection": {
+      "raw_selected_rows": 34753,
+      "excluded_other_procedures": 0,
+      "excluded_nonregular_aih": 0,
+      "duplicate_presentations_removed": 0,
+      "excluded_outside_admission_years": 2313,
+      "admissions": 32440,
+      "extraction_utc": "2026-10-30T19:41:59+00:00",
+      "years": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "procedures": [
+        "0416010121"
+      ],
+      "processing_cutoff": "2026-09",
+      "source": "ftp://ftp.datasus.gov.br/dissemin/publicos/SIHSUS/200801_/Dados",
+      "source_files": 3454,
+      "source_bytes": 10061476720
+    },
+    "extraction_software": {
+      "pandas": "2.3.3",
+      "pysus": "2.11.7",
+      "pyreaddbc": "2.0.4",
+      "pyarrow": "26.0.0"
+    },
+    "admissions_sha256": "88d0c6c397530552b373482d0b4d66945cff98697a098d627445bd456ae3bf72",
+    "coverage": [
+      {
+        "year": 2016,
+        "procedure": "0416010121",
+        "n_selected": 3010,
+        "n_located": 2960,
+        "n_excluded": 50
+      },
+      {
+        "year": 2017,
+        "procedure": "0416010121",
+        "n_selected": 3231,
+        "n_located": 3157,
+        "n_excluded": 74
+      },
+      {
+        "year": 2018,
+        "procedure": "0416010121",
+        "n_selected": 3382,
+        "n_located": 3382,
+        "n_excluded": 0
+      },
+      {
+        "year": 2019,
+        "procedure": "0416010121",
+        "n_selected": 3467,
+        "n_located": 3467,
+        "n_excluded": 0
+      },
+      {
+        "year": 2020,
+        "procedure": "0416010121",
+        "n_selected": 2546,
+        "n_located": 2546,
+        "n_excluded": 0
+      },
+      {
+        "year": 2021,
+        "procedure": "0416010121",
+        "n_selected": 2739,
+        "n_located": 2739,
+        "n_excluded": 0
+      },
+      {
+        "year": 2022,
+        "procedure": "0416010121",
+        "n_selected": 3473,
+        "n_located": 3473,
+        "n_excluded": 0
+      },
+      {
+        "year": 2023,
+        "procedure": "0416010121",
+        "n_selected": 3684,
+        "n_located": 3684,
+        "n_excluded": 0
+      },
+      {
+        "year": 2024,
+        "procedure": "0416010121",
+        "n_selected": 3530,
+        "n_located": 3530,
+        "n_excluded": 0
+      },
+      {
+        "year": 2025,
+        "procedure": "0416010121",
+        "n_selected": 3378,
+        "n_located": 3378,
+        "n_excluded": 0
+      }
+    ],
+    "municipal_reference": {
+      "reference_file": "/home/rei-luisinho/oncological-prostatectomy-access-optimization/.cache/ibge/municipalities.json",
+      "reference_sha256": "86ecdccdf97d72e7e5e46f0854cfcea8bacc28154cc1bc4ed0e6110e3a6c9c02"
+    }
+  },
+  "software": {
+    "pandas": "2.3.3",
+    "numpy": "2.5.4",
+    "pyarrow": "26.0.0",
+    "duckdb": "1.5.6",
+    "pysus": "2.11.7",
+    "pyomo": "6.10.1",
+    "highspy": "1.15.1",
+    "geopandas": "1.2.0"
+  },
+  "scenarios": {
+    "observed": {
+      "label": "Observado",
+      "slack": null,
+      "max_interstate_share": null
+    },
+    "s3_010": {
+      "label": "S3 (0%; 1,00%)",
+      "slack": 0,
+      "max_interstate_share": 0.01
+    },
+    "s3_020": {
+      "label": "S3 (0%; 2,00%)",
+      "slack": 0,
+      "max_interstate_share": 0.02
+    },
+    "s2_0": {
+      "label": "S2 (0%)",
+      "slack": 0,
+      "max_interstate_share": null
+    },
+    "s2_5": {
+      "label": "S2 (5%)",
+      "slack": 0.05,
+      "max_interstate_share": null
+    },
+    "s2_10": {
+      "label": "S2 (10%)",
+      "slack": 0.1,
+      "max_interstate_share": null
+    },
+    "s2_20": {
+      "label": "S2 (20%)",
+      "slack": 0.2,
+      "max_interstate_share": null
+    },
+    "s1": {
+      "label": "S1",
+      "slack": null,
+      "max_interstate_share": null
+    }
+  },
+  "run_signature": "8be7abefafb6c99d047bd7cbef32cb2eff7259577a204514b054ee714816a369",
+  "generated_at_utc": "2026-10-30T22:59:38+00:00",
+  "optimization_unit": "year/procedure",
+  "interpretation": "Historical flows evaluated on the fixed May 2024 reference network.",
+  "carbon": {
+    "assumptions": {
+      "factor_kg_co2e_per_pkm": 0.02776,
+      "legs": 2,
+      "travelers": 1,
+      "distance_multiplier": 1.0,
+      "price_per_tonne": null
+    },
+    "currency": "BRL",
+    "default_factor_reference": "DESNZ 2025, Coach, factor 25_314_3146_11_1",
+    "source": "https://www.gov.uk/government/publications/greenhouse-gas-reporting-conversion-factors-2025",
+    "scope": "Gross transport emissions only; potential equivalents, not certified credits."
+  },
+  "export_sha256": {
+    "metrics/annual_statistics.csv": "63af93eb216336ce83a9d11d2729a0075291c597a4366e62fb586a04fecded6a",
+    "metrics/summary_statistics.csv": "85f85cdabcea2ca44ffae9ac57db2967a928aaa2240e5731b8cb1821f1a50b63",
+    "reports/history.html": "9899c0ffa0d6ea38dc8fb4c5a415a5c2e55b79b18c845d71d764415592b75fda"
+  }
+}
