@@ -23,8 +23,14 @@ class TransportScenario:
         ):
             raise ValueError("Maximum interstate share must be finite and between zero and one.")
 
-    def capacity(self, observed_supply: int) -> int:
+    def capacity  (self, observed_supply: int           ) -> int:
         return int((Decimal(1) + Decimal(str(self.slack))) * observed_supply)
+
+    def capacities(self, observed_supply: dict[str, int]) -> dict[str, int]:
+        return {
+            code : self.capacity(supply)
+            for code, supply in observed_supply.items()
+        }
 
     def interstate_limit(self, total_admissions: int) -> int | None:
         if self.max_interstate_share is None:
