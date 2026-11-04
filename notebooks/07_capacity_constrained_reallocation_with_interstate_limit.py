@@ -223,12 +223,7 @@ def _(SLACKS, TransportScenario, data, pd):
     for _slack in SLACKS:
         _scenario = TransportScenario(slack=_slack)
 
-        _capacity = pd.Series(
-            {
-                j : _scenario.capacity(supply)
-                for j, supply in data.observed_supply.items()
-            }
-        )
+        _capacity = pd.Series(_scenario.capacities(data.observed_supply))
 
         _state_capacity = (
             _capacity
@@ -300,11 +295,8 @@ def _(
         _model  = build_transport_model(data  , _scenario)
         _result = solve_model          (_model, allow_infeasible=True)
 
-        _termination    = str(_result  .solver.termination_condition)
-        _total_capacity = sum(
-            _scenario.capacity(u)
-            for u in data.observed_supply.values()
-        )
+        _termination    = str(_result  .solver    .termination_condition         )
+        _total_capacity = sum(_scenario.capacities(data.observed_supply).values())
 
         _row = {
             "slack"                     : _slack,

@@ -208,10 +208,7 @@ def _(
             "slack"     : _scenario.slack,
             "slack_pct" : _pct           ,
 
-            "total_capacity" : sum(
-                _scenario.capacity(supply)
-                for supply in data.observed_supply.values()
-            ),
+            "total_capacity" : sum(_scenario.capacities(data.observed_supply).values()),
 
             "model_objective_km" : _objective                               ,
             "termination"        : str(_result.solver.termination_condition),
