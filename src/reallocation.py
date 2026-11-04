@@ -352,6 +352,10 @@ def compare_metrics(observed_metrics, nearest_metrics):
     }
 
 
+def _provider_totals(table, code, value, provider_codes):
+    return table.groupby(code)[value].sum().reindex(provider_codes, fill_value=0)
+
+
 def impact_tables(observed, scenario, municipal, top_n=10):
     """Decompose national savings into complete flow/provider tables and rankings"""
 
@@ -433,16 +437,16 @@ def impact_tables(observed, scenario, municipal, top_n=10):
 
     providers = municipal.loc[provider_codes, ["municipality", "state", "label"]].copy()
 
-    providers["observed_admissions"] = observed.groupby(
-        "destination_code"
-    )["observed_flow"].sum().reindex(provider_codes, fill_value=0)
+    providers["observed_admissions"] = _provider_totals(
+        observed, "destination_code", "observed_flow", provider_codes
+    )
 
     if not providers["observed_admissions"].eq(municipal.loc[provider_codes, "observed_supply"]).all():
         raise ValueError("Observed provider counts differ from the municipal reference.")
 
-    providers["nearest_admissions"] = scenario.groupby(
-        "destination_code"
-    )["allocated_flow"].sum().reindex(provider_codes, fill_value=0)
+    providers["nearest_admissions"] = _provider_totals(
+        scenario, "destination_code", "allocated_flow", provider_codes
+    )
 
     changed = flows.loc[flows["destination_changed"]]
 
@@ -450,20 +454,22 @@ def impact_tables(observed, scenario, municipal, top_n=10):
         ("incoming_admissions", "nearest_destination_code" ),
         ("outgoing_admissions", "observed_destination_code"),
     ]:
-        providers[column] = changed.groupby(code)["observed_flow"].sum().reindex(provider_codes, fill_value=0)
+        providers[column] = _provider_totals(changed, code, "observed_flow", provider_codes)
 
-    providers["retained_admissions"] = flows.loc[
-        ~flows["destination_changed"]
-    ].groupby(
-        "observed_destination_code"
-    )["observed_flow"].sum().reindex(provider_codes, fill_value=0)
+    providers["retained_admissions"] = _provider_totals(
+        flows.loc[~flows["destination_changed"]],
+
+        "observed_destination_code",
+        "observed_flow"            ,
+         provider_codes            ,
+    )
 
     providers["net_increase"] = providers["nearest_admissions"] - providers["observed_admissions"]
     providers["increase_pct"] = 100 * providers["net_increase"] / providers["observed_admissions"]
 
-    providers["saved_admission_km"] = flows.groupby(
-        "nearest_destination_code"
-    )["saved_admission_km"].sum().reindex(provider_codes, fill_value=0)
+    providers["saved_admission_km"] = _provider_totals(
+        flows, "nearest_destination_code", "saved_admission_km", provider_codes
+    )
 
     saved_total = float(flows["saved_admission_km"].sum())
 
