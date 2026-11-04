@@ -25,8 +25,8 @@ def build_transport_model(
     model.U = pyo.Param(
         model.J,
 
-        within    =pyo.NonNegativeIntegers                                                ,
-        initialize={j: scenario.capacity(data.observed_supply[j]) for j in data.providers},
+        within    =pyo.NonNegativeIntegers                  ,
+        initialize=scenario.capacities(data.observed_supply),
     )
     model.d = pyo.Param(model.A, within=pyo.NonNegativeIntegers, initialize=data.distance)
 

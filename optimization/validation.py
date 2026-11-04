@@ -40,13 +40,8 @@ def validate_solution(
     origin_totals   = solution.groupby("origin_code"     ).allocated_flow.sum().reindex(data.origins  , fill_value=0)
     provider_totals = solution.groupby("destination_code").allocated_flow.sum().reindex(data.providers, fill_value=0)
 
-    demand   = pd.Series(data.demand)
-    capacity = pd.Series(
-        {
-            j : scenario.capacity(data.observed_supply[j])
-            for j in data.providers
-        }
-    )
+    demand   = pd.Series(data    .demand)
+    capacity = pd.Series(scenario.capacities(data.observed_supply))
 
     demand_residual = float((origin_totals   - demand  ).abs ()       .max())
     capacity_excess = float((provider_totals - capacity).clip(lower=0).max())

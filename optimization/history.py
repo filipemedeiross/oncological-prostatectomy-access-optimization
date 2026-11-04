@@ -157,10 +157,7 @@ def solve_scenarios(data: OptimizationData, od: pd.DataFrame):
                 solution.allocated_flow @ solution.model_distance_km
             )
         else:
-            capacity = pd.Series({
-                j : scenario.capacity(supply)
-                for j, supply in data.observed_supply.items()
-            })
+            capacity = pd.Series(scenario.capacities(data.observed_supply))
 
             state_capacity = capacity.groupby(
                 pd.Series(data.provider_state)
