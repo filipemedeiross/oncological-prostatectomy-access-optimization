@@ -162,9 +162,9 @@ def _(mo):
 
     The Tefé proxy is a limited approximation: the [Municipality of Alvarães](https://alvaraes.am.gov.br/2026/08/transporte-universitario-tefe-novos-horarios/) documents bus transportation to Nogueira and boat transportation between Nogueira and Tefé. Using Alvarães as a proxy does not account for the river crossing, transfers, or waiting times and does not represent patients' actual travel.
 
-    The Autazes proxy is a territorial approximation based on the AM-254/BR-319 connection documented by the [Government of Amazonas](https://www.agenciaamazonas.am.gov.br/noticias/governador-wilson-lima-assina-ordens-de-servico-para-recuperacao-da-am-254-e-obras-do-sistema-viario-em-autazes/). The [DPE-AM](https://defensoria.am.def.br/2024/05/06/dpe-am-investiga-interrupcao-do-transporte-escolar-para-alunos-da-zona-rural-de-careiro-castanho/) also identifies stretches of the Estrada de Autazes in rural Careiro in May 2024. Using Careiro–destination estimates does not add access from Autazes to the proxy network or account for differences in crossings, transfers, and waiting times; it does not represent patients' actual travel. Both sources were accessed on **October 30, 2026**; distances and times still come from the May 2024 Saldanha matrix.
+    The Autazes proxy is a territorial approximation based on the AM-254/BR-319 connection documented by the [Government of Amazonas](https://www.agenciaamazonas.am.gov.br/noticias/governador-wilson-lima-assina-ordens-de-servico-para-recuperacao-da-am-254-e-obras-do-sistema-viario-em-autazes/). The [DPE-AM](https://defensoria.am.def.br/2024/05/06/dpe-am-investiga-interrupcao-do-transporte-escolar-para-alunos-da-zona-rural-de-careiro-castanho/) also identifies stretches of the Estrada de Autazes in rural Careiro in May 2024. Using Careiro–destination estimates does not add access from Autazes to the proxy network or account for differences in crossings, transfers, and waiting times; it does not represent patients' actual travel. Both sources were accessed on **October 30, 2026**.
 
-    The Balneário Rincão proxy is a territorial approximation based on its separation from Içara under [Santa Catarina Law 12,668/2003](https://leis.alesc.sc.gov.br/ato-normativo/14324) and the SC-445 connection documented by the [Municipality of Içara in March 2024](https://www.icara.sc.gov.br/noticias/noticia?post=defesa-civil-de-icara-interdita-trecho-da-sc-445-no-sentido-a-balneario-rincao-25755). Using Içara–destination estimates excludes access from Balneário Rincão to the proxy network and local route differences; it does not represent patients' actual travel. Both sources were accessed on **October 30, 2026**; distances and times still come from the May 2024 Saldanha matrix.
+    The Balneário Rincão proxy is a territorial approximation based on its separation from Içara under [Santa Catarina Law 12,668/2003](https://leis.alesc.sc.gov.br/ato-normativo/14324) and the SC-445 connection documented by the [Municipality of Içara in March 2024](https://www.icara.sc.gov.br/noticias/noticia?post=defesa-civil-de-icara-interdita-trecho-da-sc-445-no-sentido-a-balneario-rincao-25755). Using Içara–destination estimates excludes access from Balneário Rincão to the proxy network and local route differences; it does not represent patients' actual travel. Both sources were accessed on **October 30, 2026**.
 
     **Mojuí dos Campos → Santarém is not assigned the proxy's zero diagonal distance.** For this specific pair, we use **33.3 km and 30 minutes by car**, according to [Rome2Rio, Mojuí dos Campos → Santarém](https://www.rome2rio.com/s/Moju%C3%AD-dos-Campos/Santar%C3%A9m), accessed on **October 22, 2026**.
     """)
@@ -174,44 +174,22 @@ def _(mo):
 @app.cell
 def _(DEFAULT_PARQUET_PATH, raw_od, resolve_routes):
     od, proxy_audit = resolve_routes(raw_od, DEFAULT_PARQUET_PATH)
-    return od, proxy_audit
+    return (od,)
 
 
-@app.cell
-def _():
-    def coverage(table, stage):
-        summary = table.groupby("route_status").agg(
-            pairs=(
-                "observed_flow",
-                "size"         ,
-            ),
+@app.function
+def coverage_totals(table, stage):
+    available = table[["distance_km", "travel_time_min"]].notna().all(axis=1)
 
-            admissions=(
-                "observed_flow",
-                "sum"          ,
-            ),
-        ).reset_index()
+    return {
+        "stage" : stage     ,
+        "pairs" : len(table),
 
-        summary.insert(0, "stage", stage)
-
-        summary["pairs_pct"] = 100 * summary["pairs"] / len(table)
-
-        return summary
-
-    def coverage_totals(table, stage):
-        available = table[["distance_km", "travel_time_min"]].notna().all(axis=1)
-
-        return {
-            "stage" : stage     ,
-            "pairs" : len(table),
-
-            "coverage_pct"       : 100 * available.mean() ,
-            "estimated_pairs"    : int(  available .sum()),
-            "pending_pairs"      : int((~available).sum()),
-            "pending_admissions" : int(table.loc[~available, "observed_flow"].sum()),
-        }
-
-    return (coverage_totals,)
+        "coverage_pct"       : 100 * available.mean() ,
+        "estimated_pairs"    : int(  available .sum()),
+        "pending_pairs"      : int((~available).sum()),
+        "pending_admissions" : int(table.loc[~available, "observed_flow"].sum()),
+    }
 
 
 @app.cell
@@ -219,33 +197,12 @@ def _(OUTPUT, admissions, municipal, od, validate_od, write_csv):
     validate_od(od, municipal, admissions)
     write_csv  (od, OUTPUT   )
 
-    pending_od   = od.loc[od[["distance_km", "travel_time_min"]].isna().any(axis=1)]
     validated_od = od
     return (validated_od,)
 
 
 @app.cell
-def _(coverage_totals, mo, od, pd, proxy_audit, raw_od):
-    _audit_summary = proxy_audit.groupby(
-        [
-            "origin_code"      ,
-            "proxy_origin_code",
-            "original_status"  ,
-            "route_status"     ,
-        ],
-    ).agg(
-        pairs=(
-            "observed_flow",
-            "size"         ,
-        ),
-
-        admissions=(
-            "observed_flow",
-            "sum"          ,
-        )
-    ).reset_index()
-
-
+def _(mo, od, pd, raw_od):
     mo.vstack([
         mo.ui.table(
             pd.DataFrame([
