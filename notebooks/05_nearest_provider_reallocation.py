@@ -178,24 +178,22 @@ def _(FIGURES, PERIOD, plt):
 
         FIGURES.mkdir(parents=True, exist_ok=True)
 
-        paths = [
-            FIGURES / f"{name}_{PERIOD}.{suffix}"
-            for suffix in ("pdf",)
-        ]
+        path = FIGURES / f"{name}_{PERIOD}.pdf"
 
-        for path in paths:
-            options = {
-                "metadata" : {
-                    "CreationDate" : None,
-                    "ModDate"      : None,
-                }
-            } if path.suffix == ".pdf" else {}
+        figure.savefig(
+            path,
 
-            figure.savefig(path, dpi=160, bbox_inches="tight", **options)
+            dpi        =160    ,
+            bbox_inches="tight",
+            metadata   ={
+                "CreationDate" : None,
+                "ModDate"      : None,
+            },
+        )
 
         plt.close(figure)
 
-        return figure, paths
+        return figure, [path]
 
     return (export_figure,)
 
