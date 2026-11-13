@@ -27,9 +27,10 @@ def _():
     import sys
     import json
 
-    from pathlib  import Path
-    from hashlib  import sha256
-    from datetime import datetime, timezone
+    from pathlib   import Path
+    from hashlib   import sha256
+    from fractions import Fraction
+    from datetime  import datetime, timezone
 
     import numpy             as np
     import pandas            as pd
@@ -37,7 +38,20 @@ def _():
     import pyomo.environ     as pyo
     import matplotlib.pyplot as plt
 
-    return Path, datetime, json, mo, np, pd, plt, pyo, sha256, sys, timezone
+    return (
+        Fraction,
+        Path,
+        datetime,
+        json,
+        mo,
+        np,
+        pd,
+        plt,
+        pyo,
+        sha256,
+        sys,
+        timezone,
+    )
 
 
 @app.cell
@@ -65,7 +79,7 @@ def _():
 
     from optimization.metrics    import flow_metrics
     from optimization.validation import validate_solution
-    from optimization.solve      import extract_solution , solve_model
+    from optimization.solve      import extract_solution , solve_model, solver_options
 
     return (
         TransportScenario,
@@ -74,6 +88,7 @@ def _():
         flow_metrics,
         load_instance,
         solve_model,
+        solver_options,
         validate_solution,
     )
 
@@ -702,6 +717,47 @@ def _(MAX_INTERSTATE_SHARES, SLACKS, comparison, minimum_interstate, mo, pd):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## MINIMUM EXPANSION FOR ZERO-INTERSTATE FEASIBILITY
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    To find the smallest **uniform capacity slack**, fix $q=0$ and retain only within-state pairs $A_0=\{(i,j):state(i)=state(j)\}$:
+
+    $$
+    \begin{aligned}
+    \min_{s,x}\quad &s\\
+    \text{subject to}\quad
+    &\sum_{j:(i,j)\in A_0}x_{ij}=D_i,\\
+    &\sum_{i:(i,j)\in A_0}x_{ij}\le(1+s)U_j^{obs},\\
+    &x_{ij}\in\mathbb Z_{\ge0},\\
+    &s\ge0.
+    \end{aligned}
+    $$
+
+    With complete within-state connectivity, feasibility is equivalent to each state's expanded capacity covering its demand. The exact threshold here is $s^*=1/12=8\frac13\%$: Pará's production of $(14,6,12)$ becomes capacity $(15,6,13)$, meeting demand of $34$. All other states are feasible at this slack.
+
+    > **Note 01**.: This is a mixed-integer linear model: $U_j^{obs}$ is constant, and integer allocations make the capacity bound equivalent to $\lfloor(1+s)U_j^{obs}\rfloor$.
+
+    > **Note 02**.: Distance can be minimized afterwards with $s=s^*$.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## GENERATE ARTIFACTS
+    """)
+    return
+
+
 @app.cell
 def _(
     MAX_INTERSTATE_SHARES,
@@ -709,12 +765,8 @@ def _(
     ROOT,
     SLACKS,
     comparison,
-    datetime,
     flows,
     heatmap_figures,
-    json,
-    sha256,
-    timezone,
     tradeoff_fig,
 ):
     _prefix  = "scenario_3_interstate_constrained"
@@ -728,7 +780,6 @@ def _(
     output_paths = {
         "flows"      : ROOT / f"results/{_prefix}_{PERIOD}.csv"           ,
         "comparison" : ROOT / f"metrics/{_prefix}_comparison_{PERIOD}.csv",
-        "metadata"   : ROOT / f"metrics/scenario_3_metrics_{PERIOD}.json" ,
 
         **{
             name : ROOT / f"docs/{name}_{PERIOD}.pdf"
@@ -740,7 +791,14 @@ def _(
         _path.parent.mkdir(parents=True, exist_ok=True)
 
     flows.drop(
-        columns=["model_distance_km"]
+        columns=[
+            "slack_pct"        ,
+            "alpha"            ,
+            "model_distance_km",
+            "same_municipality",
+        ],
+
+        errors="ignore",
     ).to_csv(
         output_paths["flows"],
 
@@ -799,23 +857,385 @@ def _(
             },
         )
 
-    _metadata = {
-        "scenario"         : 3,
-        "generated_at_utc" : datetime.now(timezone.utc).isoformat(timespec="seconds"),
-
+    grid_metadata = {
         "slacks"                : list(SLACKS               ),
         "max_interstate_shares" : list(MAX_INTERSTATE_SHARES),
         "n_feasible"            : int(  comparison.feasible .sum()),
         "n_infeasible"          : int((~comparison.feasible).sum()),
 
-        "outputs" : {
-            str(path.relative_to(ROOT)) : sha256(path.read_bytes()).hexdigest()
-            for key, path in output_paths.items()
-            if  key != "metadata"
+        "outputs" : [
+            str(path.relative_to(ROOT))
+            for path in output_paths.values()
+        ],
+    }
+    return grid_metadata, output_paths
+
+
+@app.cell(hide_code=True)
+def _(ROOT, mo, output_paths):
+    mo.md("Generated artifacts:\n\n" + "\n".join(
+        f"- `{path.relative_to(ROOT)}`"
+        for path in output_paths.values()
+    ))
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## RELATIVE COUNTERFACTUALS: MINIMUM INTERSTATE SHARE
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    For each slack $s$, let $F_s$ contain all nonnegative **integer** allocations satisfying demand and provider capacities $\lfloor(1+s)U_j^{obs}\rfloor$. Define rounded travel distance $C(x)=\sum_{ij}\tilde d_{ij}x_{ij}$ and interstate admissions $K(x)=\sum_{(i,j):state(i)\ne state(j)}x_{ij}$.
+
+    First solve the unrestricted reference, separately at each expansion:
+
+    $$Z_s^*=\min_{x\in F_s}C(x),\qquad q=1.$$
+
+    Then find the smallest interstate budget satisfying a relative distance target against that **fixed reference value**:
+
+    $$
+    \begin{aligned}
+    \min_{x,q}\quad &q\\
+    \text{subject to}\quad
+    &C(x)\le\alpha Z_s^*,\\
+    &K(x)\le qN,\\
+    &N=\sum_iD_i,\\
+    &0\le q\le1,\\
+    &x\in F_s.
+    \end{aligned}
+    $$
+
+    Since $N$ is fixed, solve for the smallest integer $K(x)$ and report $q_{min}=K_{min}/N$ exactly. For **$\alpha=1$**, every admissible allocation has distance $Z_s^*$: this selects the fewest interstate admissions among distance-optimal solutions.
+
+    > **Note**.: The objective is the smallest admissible $q$, $q=1$ is the reference's allowed ceiling, not its realized share. The minimum share can increase with expansion because $Z_s^*$ also changes.
+    """)
+    return
+
+
+@app.cell
+def _():
+    CF_SLACKS = tuple(
+        pct / 100
+        for pct in (*range(26), *range(30, 101, 5))
+    )
+
+    CF_ALPHA  = 1
+    return CF_ALPHA, CF_SLACKS
+
+
+@app.cell
+def _(
+    CF_ALPHA,
+    CF_SLACKS,
+    Fraction,
+    OBJECTIVE_ATOL,
+    TransportScenario,
+    build_transport_model,
+    data,
+    distances,
+    extract_solution,
+    mo,
+    n_admissions,
+    np,
+    pd,
+    pyo,
+    solver_options,
+    validate_solution,
+):
+    _rows, _allocations = [], []
+
+    for _slack in mo.status.progress_bar(CF_SLACKS, title="Solving relative counterfactuals"):
+        _scenario = TransportScenario    (
+            slack               =_slack,
+            max_interstate_share=1     ,
+        )
+        _model    = build_transport_model(
+            data     ,
+            _scenario,
+        )
+
+        _solver = pyo.SolverFactory("appsi_highs")
+
+        _solver.options.update(
+            {
+                **solver_options(_model),
+
+                "presolve" : "off",
+            }
+        )
+
+        def _solve(warmstart=False):
+            _result = _solver.solve(
+                _model,
+
+                load_solutions=False    ,
+                warmstart     =warmstart,
+            )
+
+            if _result.solver.termination_condition != pyo.TerminationCondition.optimal:
+                raise RuntimeError(f"An optimal solution is required at slack={_slack}.")
+
+            _model.solutions.load_from(_result)
+
+            _cost         = float(pyo.value(_model.total_distance))
+            _integer_cost = int  (round    (_cost                ))
+
+            if not np.isclose(_cost, _integer_cost, rtol=0, atol=OBJECTIVE_ATOL):
+                raise RuntimeError("The integer-distance objective is not integral.")
+
+            _solution = extract_solution (_model, data, distances=distances)
+            _checks   = validate_solution(
+                _solution    ,
+                data         ,
+                _scenario    ,
+                _integer_cost,
+
+                termination_condition=_result.solver.termination_condition,
+                solver_status        =_result.solver.status               ,
+            )
+
+            return _solution, _integer_cost, int(_checks["interstate_admissions"])
+
+        _reference, _reference_cost, _reference_k = _solve()
+
+        _budget = int(CF_ALPHA * _reference_cost)
+
+        _model.relative_distance_limit = pyo.Constraint(
+            expr=_model.total_distance.expr <= _budget
+        )
+
+        _model.total_distance.deactivate()
+
+        _model.minimum_interstate      = pyo.Objective(
+            expr =pyo.quicksum(
+                _model.x[arc]
+                for arc in _model.A_inter
+            ),
+
+            sense=pyo.minimize,
+        )
+
+        _counterfactual, _cost, _k = _solve(warmstart=True)
+
+        if (
+            _cost > _budget or
+
+            (CF_ALPHA == 1 and _cost != _reference_cost) or
+            (CF_ALPHA >= 1 and _k    >  _reference_k   ) or
+
+            not np.isclose(
+                pyo.value(_model.minimum_interstate),
+                _k                                  ,
+
+                rtol=0             ,
+                atol=OBJECTIVE_ATOL,
+            )
+        ):
+            raise RuntimeError("The relative distance or interstate objective failed validation.")
+
+        _reference_total      = float(_reference     .total_distance_km.sum())
+        _counterfactual_total = float(_counterfactual.total_distance_km.sum())
+
+        _rows.append({
+            "slack"          : _slack      ,
+            "n_admissions"   : n_admissions,
+            "total_capacity" : sum(_scenario.capacities(data.observed_supply).values()),
+
+            "reference_model_objective_km"      : _reference_cost,
+            "relative_distance_limit_km"        : _budget        ,
+            "counterfactual_model_objective_km" : _cost          ,
+
+            "unrestricted_interstate_admissions"   : _reference_k     ,
+            "counterfactual_interstate_admissions" : _k               ,
+            "counterfactual_q_min"                 : _k / n_admissions,
+            "counterfactual_q_min_exact"           : str(Fraction(_k, n_admissions)),
+
+            "unrestricted_interstate_pct"     : 100 * _reference_k / n_admissions       ,
+            "counterfactual_interstate_pct"   : 100 * _k / n_admissions                 ,
+            "interstate_admissions_reduction" : _reference_k - _k                       ,
+            "interstate_reduction_pp"         : 100 * (_reference_k - _k) / n_admissions,
+
+            "unrestricted_total_distance_km"   : _reference_total                    ,
+            "counterfactual_total_distance_km" : _counterfactual_total               ,
+            "unrestricted_mean_distance_km"    : _reference_total      / n_admissions,
+            "counterfactual_mean_distance_km"  : _counterfactual_total / n_admissions,
+        })
+
+        for _stage, _solution in (
+            ("unrestricted"           , _reference     ),
+            ("relative_counterfactual", _counterfactual),
+        ):
+            _allocations.append(
+                _solution
+                .drop  (
+                    columns=[
+                        "model_distance_km",
+                        "same_municipality",
+                    ]
+                )
+                .assign(
+                    stage=_stage,
+                    slack=_slack,
+                )
+            )
+
+
+    cf_comparison = pd.DataFrame(_rows)
+
+    cf_flows = pd.concat(_allocations, ignore_index=True)
+    cf_flows = cf_flows [
+        [
+            "stage",
+            "slack",
+
+            *[
+                c
+                for c in cf_flows
+                if  c not in {"stage", "slack"}
+            ],
+        ]
+    ]
+
+    if cf_comparison.reference_model_objective_km.diff().dropna().gt(OBJECTIVE_ATOL).any():
+        raise RuntimeError("The optimal reference distance increased with capacity.")
+    return cf_comparison, cf_flows
+
+
+@app.cell(hide_code=True)
+def _(cf_comparison, mo):
+    mo.ui.table(
+        cf_comparison.round(6),
+
+        selection=None                                   ,
+        label    ="Relative counterfactuals by expansion",
+    )
+    return
+
+
+@app.cell
+def _(cf_comparison, plt):
+    cf_figure, _ax = plt.subplots(figsize=(10, 4.8), layout="constrained")
+
+    for _column, _style, _color, _label in (
+        ("unrestricted_interstate_pct"  , "o-" , "#0072B2", "Unrestricted Scenario 3 (q = 1)"           ),
+        ("counterfactual_interstate_pct", "s--", "#D55E00", "Relative counterfactual (α = 1, minimum q)"),
+    ):
+        _ax.plot(
+            100 * cf_comparison.slack   ,
+                  cf_comparison[_column],
+
+            _style,
+
+            markersize=4     ,
+            color     =_color,
+            label     =_label,
+        )
+
+    _ax.set(
+        xlabel="Nominal capacity expansion (%)",
+        ylabel="Interstate admissions (%)"     ,
+        title ="Interstate share at the same optimal distance",
+
+        xticks=range(0, 101, 10),
+        xlim  =(0, 100 ),
+        ylim  =(0, None),
+    )
+
+    _ax.grid(
+        axis ="y"      ,
+        color="#E5EAF0",
+    )
+
+    _ax.set_axisbelow(True)
+
+    _ax.spines[["top", "right"]].set_visible(False)
+    _ax.legend(frameon=False, fontsize=9)
+
+    cf_figure
+    return (cf_figure,)
+
+
+@app.cell
+def _(CF_ALPHA, CF_SLACKS, PERIOD, ROOT, cf_comparison, cf_figure, cf_flows):
+    _prefix = "scenario_3_relative_counterfactual"
+
+    cf_output_paths = {
+        "flows"      : ROOT / f"results/{_prefix}_{PERIOD}.csv"              ,
+        "comparison" : ROOT / f"metrics/{_prefix}_comparison_{PERIOD}.csv"   ,
+        "figure"     : ROOT / f"docs/{_prefix}_interstate_share_{PERIOD}.pdf",
+    }
+
+    for _path in cf_output_paths.values():
+        _path.parent.mkdir(parents=True, exist_ok=True)
+
+    for _key, _frame in (("flows", cf_flows), ("comparison", cf_comparison)):
+        _frame.to_csv(cf_output_paths[_key], index=False, encoding="utf-8-sig")
+
+    cf_figure.savefig(
+        cf_output_paths["figure"],
+
+        bbox_inches="tight",
+        metadata   ={
+            "CreationDate" : None,
+            "ModDate"      : None,
+        }
+    )
+
+    cf_metadata = {
+        "alpha"  :      CF_ALPHA  ,
+        "slacks" : list(CF_SLACKS),
+
+        "n_reference_optima"      : len(cf_comparison),
+        "n_counterfactual_optima" : len(cf_comparison),
+
+        "outputs" : [
+            str(path.relative_to(ROOT))
+            for path in cf_output_paths.values()
+        ],
+    }
+    return cf_metadata, cf_output_paths
+
+
+@app.cell
+def _(
+    PERIOD,
+    ROOT,
+    cf_metadata,
+    datetime,
+    grid_metadata,
+    json,
+    n_admissions,
+    sha256,
+    timezone,
+):
+    metadata_path = ROOT / f"metrics/scenario_3_metrics_{PERIOD}.json"
+
+    _metadata = {
+        "scenario"         : 3     ,
+        "period"           : PERIOD,
+        "generated_at_utc" : datetime.now(timezone.utc).isoformat(timespec="seconds"),
+
+        "n_admissions"            : n_admissions,
+        "interstate_grid"         : {k: v for k, v in grid_metadata.items() if k not in {"outputs"}},
+        "relative_counterfactual" : {k: v for k, v in cf_metadata  .items() if k not in {"outputs"}},
+
+        **{
+            group : {
+                name : sha256((ROOT / name).read_bytes()).hexdigest()
+                for name in sorted(set(grid_metadata[group]) | set(cf_metadata[group]))
+            }
+
+            for group in ("outputs",)
         },
     }
 
-    output_paths["metadata"].write_text(
+    metadata_path.write_text(
         json.dumps(
             _metadata,
 
@@ -826,14 +1246,13 @@ def _(
 
         encoding="utf-8",
     )
-    return (output_paths,)
+    return (metadata_path,)
 
 
 @app.cell(hide_code=True)
-def _(ROOT, mo, output_paths):
-    mo.md("Generated artifacts:\n\n" + "\n".join(
-        f"- `{path.relative_to(ROOT)}`"
-        for path in output_paths.values()
+def _(ROOT, cf_output_paths, metadata_path, mo):
+    mo.md("Generated counterfactual artifacts:\n\n" + "\n".join(
+        f"- `{path.relative_to(ROOT)}`" for path in (*cf_output_paths.values(), metadata_path)
     ))
     return
 
