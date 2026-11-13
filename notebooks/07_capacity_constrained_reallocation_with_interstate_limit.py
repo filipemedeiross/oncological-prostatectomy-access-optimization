@@ -27,10 +27,9 @@ def _():
     import sys
     import json
 
-    from pathlib   import Path
-    from hashlib   import sha256
-    from fractions import Fraction
-    from datetime  import datetime, timezone
+    from pathlib  import Path
+    from hashlib  import sha256
+    from datetime import datetime, timezone
 
     import numpy             as np
     import pandas            as pd
@@ -38,20 +37,7 @@ def _():
     import pyomo.environ     as pyo
     import matplotlib.pyplot as plt
 
-    return (
-        Fraction,
-        Path,
-        datetime,
-        json,
-        mo,
-        np,
-        pd,
-        plt,
-        pyo,
-        sha256,
-        sys,
-        timezone,
-    )
+    return Path, datetime, json, mo, np, pd, plt, pyo, sha256, sys, timezone
 
 
 @app.cell
@@ -933,7 +919,6 @@ def _():
 def _(
     CF_ALPHA,
     CF_SLACKS,
-    Fraction,
     OBJECTIVE_ATOL,
     TransportScenario,
     build_transport_model,
@@ -1039,9 +1024,6 @@ def _(
         ):
             raise RuntimeError("The relative distance or interstate objective failed validation.")
 
-        _reference_total      = float(_reference     .total_distance_km.sum())
-        _counterfactual_total = float(_counterfactual.total_distance_km.sum())
-
         _rows.append({
             "slack"          : _slack      ,
             "n_admissions"   : n_admissions,
@@ -1051,20 +1033,12 @@ def _(
             "relative_distance_limit_km"        : _budget        ,
             "counterfactual_model_objective_km" : _cost          ,
 
-            "unrestricted_interstate_admissions"   : _reference_k     ,
-            "counterfactual_interstate_admissions" : _k               ,
-            "counterfactual_q_min"                 : _k / n_admissions,
-            "counterfactual_q_min_exact"           : str(Fraction(_k, n_admissions)),
+            "unrestricted_interstate_admissions"   : _reference_k,
+            "counterfactual_interstate_admissions" : _k          ,
 
-            "unrestricted_interstate_pct"     : 100 * _reference_k / n_admissions       ,
-            "counterfactual_interstate_pct"   : 100 * _k / n_admissions                 ,
-            "interstate_admissions_reduction" : _reference_k - _k                       ,
-            "interstate_reduction_pp"         : 100 * (_reference_k - _k) / n_admissions,
-
-            "unrestricted_total_distance_km"   : _reference_total                    ,
-            "counterfactual_total_distance_km" : _counterfactual_total               ,
-            "unrestricted_mean_distance_km"    : _reference_total      / n_admissions,
-            "counterfactual_mean_distance_km"  : _counterfactual_total / n_admissions,
+            "unrestricted_interstate_pct"     : 100 * _reference_k / n_admissions,
+            "counterfactual_interstate_pct"   : 100 * _k / n_admissions          ,
+            "interstate_admissions_reduction" : _reference_k - _k                ,
         })
 
         for _stage, _solution in (
@@ -1166,16 +1140,33 @@ def _(CF_ALPHA, CF_SLACKS, PERIOD, ROOT, cf_comparison, cf_figure, cf_flows):
     _prefix = "scenario_3_relative_counterfactual"
 
     cf_output_paths = {
-        "flows"      : ROOT / f"results/{_prefix}_{PERIOD}.csv"              ,
-        "comparison" : ROOT / f"metrics/{_prefix}_comparison_{PERIOD}.csv"   ,
-        "figure"     : ROOT / f"docs/{_prefix}_interstate_share_{PERIOD}.pdf",
+        "unrestricted_flows" : ROOT / f"results/scenario_3_unrestricted_{PERIOD}.csv",
+        "flows"              : ROOT / f"results/{_prefix}_{PERIOD}.csv"              ,
+        "comparison"         : ROOT / f"metrics/{_prefix}_comparison_{PERIOD}.csv"   ,
+        "figure"             : ROOT / f"docs/{_prefix}_interstate_share_{PERIOD}.pdf",
     }
 
     for _path in cf_output_paths.values():
         _path.parent.mkdir(parents=True, exist_ok=True)
 
-    for _key, _frame in (("flows", cf_flows), ("comparison", cf_comparison)):
-        _frame.to_csv(cf_output_paths[_key], index=False, encoding="utf-8-sig")
+    for _key, _stage in (
+        ("unrestricted_flows", "unrestricted"           ),
+        ("flows"             , "relative_counterfactual"),
+    ):
+        cf_flows.loc[
+            cf_flows.stage.eq(_stage)
+        ].drop(
+            columns="stage",
+        ).to_csv(
+            cf_output_paths[_key],
+
+            index   =False      ,
+            encoding="utf-8-sig",
+        )
+
+    cf_comparison.to_csv(
+        cf_output_paths["comparison"], index=False, encoding="utf-8-sig"
+    )
 
     cf_figure.savefig(
         cf_output_paths["figure"],
@@ -1210,18 +1201,15 @@ def _(
     datetime,
     grid_metadata,
     json,
-    n_admissions,
     sha256,
     timezone,
 ):
     metadata_path = ROOT / f"metrics/scenario_3_metrics_{PERIOD}.json"
 
     _metadata = {
-        "scenario"         : 3     ,
-        "period"           : PERIOD,
+        "scenario"         : 3,
         "generated_at_utc" : datetime.now(timezone.utc).isoformat(timespec="seconds"),
 
-        "n_admissions"            : n_admissions,
         "interstate_grid"         : {k: v for k, v in grid_metadata.items() if k not in {"outputs"}},
         "relative_counterfactual" : {k: v for k, v in cf_metadata  .items() if k not in {"outputs"}},
 
