@@ -1,8 +1,6 @@
 {
   "scenario": 3,
-  "period": "2026_first_half",
-  "generated_at_utc": "2026-11-13T20:46:57+00:00",
-  "n_admissions": 1734,
+  "generated_at_utc": "2026-11-13T22:48:15+00:00",
   "interstate_grid": {
     "slacks": [
       0.0,
@@ -78,8 +76,9 @@
     "docs/scenario_3_relative_counterfactual_interstate_share_2026_first_half.pdf": "4f58521619d8255d83b81e1d34c4ee84461d1ac802d8011e8d50d54a1e66c4ca",
     "docs/scenario_3_tradeoff_2026_first_half.pdf": "9b4974c3279c2e15346c2ff635e466979f055537236bfd8cd95ab1019c2f1be4",
     "metrics/scenario_3_interstate_constrained_comparison_2026_first_half.csv": "9434e2a520f5a6d9e8dda9c802319ed920bd633c56097c9ad4c39fb376e648dc",
-    "metrics/scenario_3_relative_counterfactual_comparison_2026_first_half.csv": "a42aab5cbea248712425506add4d9aebb504f86070e519bb684355f7ae475bc4",
+    "metrics/scenario_3_relative_counterfactual_comparison_2026_first_half.csv": "3e2e82e5f78c9a8278048758e4c1b87b0c7ac073f8f6d346463b67691093cef3",
     "results/scenario_3_interstate_constrained_2026_first_half.csv": "ff3fa49c5156c06a7dd8cc046e64c52e966f6008ec92cbb0c3e2aae3ef11a458",
-    "results/scenario_3_relative_counterfactual_2026_first_half.csv": "b0e57879308ffde947af763a874bf4285b88dc3c07b436796413840a036643a8"
+    "results/scenario_3_relative_counterfactual_2026_first_half.csv": "949fe72b19e3bfe175a5e449d2e05f4949d5460e3156e47f3e2dc3230dccc6b8",
+    "results/scenario_3_unrestricted_2026_first_half.csv": "ad16e9a1358514d6f5c0729b6cee68b795aaa7146ac5b08d80ccf1d2b3255f19"
   }
 }
