@@ -1,18 +1,17 @@
 """Admission-weighted metrics evaluated with original distances"""
 
-import numpy as np
+from src.quantiles import frequency_percentiles
 
 
 def flow_metrics(solution, observed_total):
     n     = int  (solution.allocated_flow   .sum())
     total = float(solution.total_distance_km.sum())
 
-    distances = np.repeat    (
+    quantiles = frequency_percentiles(
         solution.distance_km   .to_numpy(             ),
         solution.allocated_flow.to_numpy(dtype="int64"),
-    )
-    quantiles = np.percentile(
-        distances, [50, 75, 90, 95], method="linear"
+
+        [50, 75, 90, 95],
     )
 
     metrics = {

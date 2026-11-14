@@ -16,6 +16,8 @@ from tempfile import NamedTemporaryFile
 import numpy  as np
 import pandas as pd
 
+from src.quantiles import frequency_percentiles
+
 
 ADMISSION_COLUMNS = {
     "aih_number"     : "admission_id"  ,
@@ -517,8 +519,20 @@ def flow_metrics(table, *, flow_column="observed_flow", decimals=2):
 
     n = int(counts.sum())
 
-    distances =       np.repeat(table["distance_km"].to_numpy(), counts )
-    total     = float(np.dot   (table["distance_km"]           , counts))
+    distances = table["distance_km"].to_numpy()
+
+    quantiles = frequency_percentiles(
+        distances,
+        counts   ,
+
+        [
+            50,
+            75,
+            90,
+            95,
+        ],
+    )
+    total     = float(np.dot(distances, counts))
 
     metrics = {
         "n_admissions"        : n         ,
@@ -528,7 +542,7 @@ def flow_metrics(table, *, flow_column="observed_flow", decimals=2):
 
         "total_distance_km" : total    ,
         "mean_distance_km"  : total / n,
-        "max_distance_km"   : float(distances.max()),
+        "max_distance_km"   : float(distances[counts > 0].max()),
     }
 
     metrics.update(
@@ -540,9 +554,7 @@ def flow_metrics(table, *, flow_column="observed_flow", decimals=2):
                 "p95_distance_km"   ,
             ],
 
-            map(
-                float, np.percentile(distances, [50, 75, 90, 95], method="linear")
-            ),
+            map(float, quantiles),
         )
     )
 
