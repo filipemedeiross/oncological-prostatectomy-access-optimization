@@ -169,32 +169,16 @@ def _(compare_metrics, observed, scenario, scenario_metrics):
 
 
 @app.cell
-def _(FIGURES, PERIOD, plt):
-    def export_figure(figure, name):
-        """Save the displayed figure without mutating shared notebook state"""
+def _(FIGURES, PERIOD):
+    from functools         import partial       as _partial
+    from src.visualization import export_figure as _export_figure
 
-        if figure is None:
-            return None, []
+    export_figure = _partial(
+        _export_figure,
 
-        FIGURES.mkdir(parents=True, exist_ok=True)
-
-        path = FIGURES / f"{name}_{PERIOD}.pdf"
-
-        figure.savefig(
-            path,
-
-            dpi        =160    ,
-            bbox_inches="tight",
-            metadata   ={
-                "CreationDate" : None,
-                "ModDate"      : None,
-            },
-        )
-
-        plt.close(figure)
-
-        return figure, [path]
-
+        directory=FIGURES,
+        period   =PERIOD ,
+    )
     return (export_figure,)
 
 
