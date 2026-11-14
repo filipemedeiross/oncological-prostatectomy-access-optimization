@@ -566,7 +566,10 @@ def _(
 
 
     flows.drop(
-        columns=["model_distance_km"]
+        columns=[
+            "model_distance_km",
+            "same_municipality",
+        ]
     ).to_csv(
         output_paths["flows"],
 
