@@ -12,11 +12,11 @@ The unit of analysis is the admission, rather than a unique patient. Demand repr
 | --- | --- |
 | [01 — Data Processing](notebooks/01_sih_data_processing.py) | Extract, filter, and consolidate admissions. |
 | [02 — Municipal Analysis](notebooks/02_municipal_data_analysis.py) | Aggregate demand and production and analyze their geographic distribution. |
-| [03 — Origin–Destination Matrix](notebooks/03_origin_destination_data.py) | Assign distances to municipality pairs and export the optimization instance. |
+| [03 — OD Matrix](notebooks/03_origin_destination_data.py) | Assign distances to municipality pairs and export the optimization instance. |
 | [04 — Observed Flows](notebooks/04_observed_flow_analysis.py) | Describe recorded travel through indicators and maps. |
 | [05 — Nearest Provider](notebooks/05_nearest_provider_reallocation.py) | Scenario 1: reallocate demand without capacity constraints. |
 | [06 — Capacity Constraints](notebooks/06_capacity_constrained_reallocation.py) | Scenario 2: minimize travel under hypothetical capacity expansion. |
-| [07 — Interstate Limit](notebooks/07_capacity_constrained_reallocation_with_interstate_limit.py) | Scenario 3: limit admissions outside the state of residence and assess feasibility and counterfactuals. |
+| [07 — Interstate Limit](notebooks/07_capacity_constrained_reallocation_with_interstate_limit.py) | Scenario 3: limit admissions outside the state of residence and assess counterfactuals. |
 | [08 — Historical Analysis](notebooks/08_historical_flow_analysis.py) | Compare annual scenarios and estimate potential transport emissions. |
 
 > **Note**.: Distances use the Saldanha matrix and its May 2024 reference network, including in the historical analysis. Travel within a municipality is assigned zero distance.
