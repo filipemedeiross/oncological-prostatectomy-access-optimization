@@ -60,10 +60,9 @@ This scenario retains Scenario 2's objective and demand and capacity constraints
 
 ```math
 \begin{aligned}
-\sum_{\substack{i\in I,\ j\in J\\state(i)\neq state(j)}}x_{ij}
-&\leq\left\lfloor qN\right\rfloor,\\
-&N=\sum_{i\in I}D_i,\\
-&x_{ij}\in\mathbb{Z}_{\geq0}.
+\sum_{\substack{i\in I,\ j\in J\\state(i)\neq state(j)}}x_{ij}\leq\left\lfloor qN\right\rfloor,
+\qquad N=\sum_{i\in I}D_i,
+\qquad x_{ij}\in\mathbb{Z}_{\geq0}.
 \end{aligned}
 ```
 
@@ -71,8 +70,9 @@ As a counterfactual, it computes the smallest interstate share among distance-op
 
 ```math
 \begin{aligned}
-K_{\min}&=\min_{x\in F_s}\{K(x):C(x)\leq\alpha Z_s^*\},\\
-q_{\min}&=K_{\min}/N,\qquad \alpha=1.
+K_{\min}&=\min_{x\in F_s}\{K(x):C(x)\leq\alpha Z_s^*\},
+\qquad q_{\min}&=K_{\min}/N,
+\qquad \alpha=1.
 \end{aligned}
 ```
 
