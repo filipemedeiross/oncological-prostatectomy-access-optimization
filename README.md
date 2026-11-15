@@ -4,9 +4,7 @@ Analysis of hospital admission flows in Brazil's SUS and reallocation scenarios 
 
 ## Data and Experiments
 
-SIH/SUS data processing selects procedure `0416010121`, regular hospital admission authorizations (AIHs, `IDENT = 1`), and admission dates (`DT_INTER`), with a processing cutoff of September 2026.
-
-The unit of analysis is the admission, rather than a unique patient. Demand represents observed care; each provider municipality's observed production serves as a capacity proxy.
+SIH/SUS data processing selects procedure `0416010121`, regular hospital admission authorizations (AIHs, `IDENT = 1`), and admission dates (`DT_INTER`), with a processing cutoff of September 2026. The unit of analysis is the admission, rather than a unique patient. Demand represents observed care; each provider municipality's observed production serves as a capacity proxy.
 
 | Experiment | Purpose |
 | --- | --- |
@@ -15,8 +13,8 @@ The unit of analysis is the admission, rather than a unique patient. Demand repr
 | [03 — OD Matrix](notebooks/03_origin_destination_data.py) | Assign distances to municipality pairs and export the optimization instance. |
 | [04 — Observed Flows](notebooks/04_observed_flow_analysis.py) | Describe recorded travel through indicators and maps. |
 | [05 — Nearest Provider](notebooks/05_nearest_provider_reallocation.py) | Scenario 1: reallocate demand without capacity constraints. |
-| [06 — Capacity Constraints](notebooks/06_capacity_constrained_reallocation.py) | Scenario 2: minimize travel under hypothetical capacity expansion. |
-| [07 — Interstate Limit](notebooks/07_capacity_constrained_reallocation_with_interstate_limit.py) | Scenario 3: limit admissions outside the state of residence and assess counterfactuals. |
+| [06 — Capacity Constraint](notebooks/06_capacity_constrained_reallocation.py) | Scenario 2: minimize travel under hypothetical capacity expansion. |
+| [07 — Interstate Limit](notebooks/07_capacity_constrained_reallocation_with_interstate_limit.py) | Scenario 3: limit admissions outside the state of residence. |
 | [08 — Historical Analysis](notebooks/08_historical_flow_analysis.py) | Compare annual scenarios and estimate potential transport emissions. |
 
 > **Note**.: Distances use the Saldanha matrix and its May 2024 reference network, including in the historical analysis. Travel within a municipality is assigned zero distance.
