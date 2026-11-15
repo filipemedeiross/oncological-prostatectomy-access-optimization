@@ -62,7 +62,8 @@ This scenario retains Scenario 2's objective and demand and capacity constraints
 \begin{aligned}
 \sum_{\substack{i\in I,\ j\in J\\state(i)\neq state(j)}}x_{ij}
 &\leq\left\lfloor qN\right\rfloor,\\
-N&=\sum_{i\in I}D_i,\qquad x_{ij}\in\mathbb{Z}_{\geq0}.
+&N=\sum_{i\in I}D_i,\\
+&x_{ij}\in\mathbb{Z}_{\geq0}.
 \end{aligned}
 ```
 
