@@ -36,14 +36,12 @@ def _():
     from pathlib            import Path
     from hashlib            import sha256
     from importlib.metadata import version
-    from io                 import StringIO
 
-    import numpy             as np
-    import pandas            as pd
-    import marimo            as mo
-    import matplotlib.pyplot as plt
+    import numpy  as np
+    import pandas as pd
+    import marimo as mo
 
-    return Path, StringIO, json, mo, np, pd, sha256, sys, version
+    return Path, json, mo, np, pd, sha256, sys
 
 
 @app.cell
@@ -70,7 +68,6 @@ def _():
 
     from optimization.equity import compare_origins  , \
                                     distance_budget  , \
-                                    origin_means     , \
                                     scenario_metrics , \
                                     solve_equity     , \
                                     summarize_origins
@@ -93,10 +90,8 @@ def _():
 
     SLACK = 0.25
 
-    EPSILONS         = (0  , 0.01, 0.02, 0.05, 0.10)
-    THRESHOLDS_KM    = (100, 200 , 500 , 850 , 1000)
-    PROXIMITY_SHARES = (0.5, 0.9 , 1.0 )
-    return EPSILONS, PERIOD, PROXIMITY_SHARES, SLACK, THRESHOLDS_KM
+    EPSILONS = (0, 0.01, 0.02, 0.05, 0.10)
+    return EPSILONS, PERIOD, SLACK
 
 
 @app.cell
@@ -135,6 +130,7 @@ def _(
             "observed_flow" : "allocated_flow",
         }
     ).copy()
+
     observed["total_distance_km"] = observed.allocated_flow * observed.distance_km
 
     saved_flows = pd.read_csv(input_paths[2], dtype=_codes)
@@ -212,6 +208,7 @@ def _(cap25, compare_origins, mo, municipal, observed, pd, summarize_origins):
     distribution = pd.concat(
         [
             summarize_origins(impact),
+
             *[
                 summarize_origins(impact, by)
                 for by in (
@@ -223,7 +220,19 @@ def _(cap25, compare_origins, mo, municipal, observed, pd, summarize_origins):
         ],
 
         ignore_index=True,
-    )
+    )[[
+        "scope",
+        "group",
+
+        "n_origins"   ,
+        "n_admissions",
+
+        "improved_origins"            ,
+        "unchanged_origins"           ,
+        "worsened_origins"            ,
+        "mean_change_per_origin_km"   ,
+        "admission_weighted_change_km",
+    ]]
 
     mo.ui.table(distribution, selection=None)
     return distribution, impact
@@ -241,7 +250,7 @@ def _(impact, mo):
                     "state"           ,
                     "demand"          ,
                     "observed_mean_km",
-                    "scenario_mean_km", 
+                    "scenario_mean_km",
                 ]
             ].round(2),
 
@@ -277,7 +286,6 @@ def _(
     municipal,
     observed,
     pd,
-    reference_cost,
     scenario_metrics,
     solve_equity,
 ):
@@ -289,39 +297,30 @@ def _(
         protection=observed.groupby("origin_code").total_distance_km.sum(),
     )
 
-    if protected is None:
-        raise RuntimeError("Observed flows should certify protection feasibility.")
-
     comparison = pd.DataFrame([
         scenario_metrics("Observed"       , observed , observed, municipal),
         scenario_metrics("CAP0"           , cap0     , observed, municipal),
         scenario_metrics("CAP25"          , cap25    , observed, municipal),
         scenario_metrics("CAP25 protected", protected, observed, municipal, protection_audit),
-    ])
+    ])[[
+        "scenario",
 
-    comparison["extra_model_distance_vs_cap25_pct"] = 100 * (
-        comparison.model_objective_km / reference_cost - 1
-    )
+        "n_active_od_pairs"    ,
+        "total_distance_km"    ,
+        "mean_distance_km"     ,
+        "max_distance_km"      ,
+
+        "improved_origins" ,
+        "unchanged_origins",
+        "worsened_origins" ,
+    ]]
     return comparison, protected
 
 
 @app.cell
 def _(comparison, mo):
     mo.ui.table(
-        comparison[
-            [
-                "scenario",
-
-                "n_active_od_pairs"    ,
-                "total_distance_km"    ,
-                "mean_distance_km"     ,
-                "max_distance_km"      ,
-
-                "improved_origins" ,
-                "unchanged_origins",
-                "worsened_origins" ,
-            ]
-        ],
+        comparison,
 
         selection=None,
     )
@@ -440,22 +439,26 @@ def _(
     return frontier, frontier_allocations
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## ARTIFACTS
+    """)
+    return
+
+
 @app.cell
 def _(
     EPSILONS,
     PERIOD,
-    PROXIMITY_SHARES,
     ROOT,
     SLACK,
-    StringIO,
-    THRESHOLDS_KM,
     TransportScenario,
     cap25,
     compare_origins,
     comparison,
     data,
     distribution,
-    equity_figure,
     frontier,
     frontier_allocations,
     impact,
@@ -465,120 +468,153 @@ def _(
     observed,
     pd,
     protected,
-    proximity,
-    proximity_allocations,
     sha256,
-    version,
 ):
     _tables = {
-        "comparison": comparison, "distribution": distribution,
-        "frontier": frontier, "proximity": proximity,
-        "origins": pd.concat([
-            impact.assign(scenario="CAP25"),
-            compare_origins(observed, protected, municipal).assign(scenario="CAP25 protected"),
-        ], ignore_index=True),
+        "comparison"   : comparison  ,
+        "distribution" : distribution,
+        "frontier"     : frontier    ,
+        "origins"      : pd.concat(
+            [
+                impact.assign(scenario="CAP25"),
+                compare_origins(
+                    observed ,
+                    protected,
+                    municipal,
+                ).assign(
+                    scenario="CAP25 protected",
+                ),
+            ],
+
+            ignore_index=True,
+        ),
     }
+
     output_paths = {}
+
     for _name, _table in _tables.items():
         _path = ROOT / f"metrics/equity_{_name}_{PERIOD}.csv"
-        _table.to_csv(_path, index=False, encoding="utf-8-sig", float_format="%.8f")
+
+        _table.to_csv(
+            _path,
+
+            index       =False      ,
+            encoding    ="utf-8-sig",
+            float_format="%.2f"     ,
+        )
+
         output_paths[_name] = _path
-    _allocations = {"CAP25": cap25, "CAP25 protected": protected, **frontier_allocations, **proximity_allocations}
-    _path = ROOT / f"results/equity_allocations_{PERIOD}.csv"
-    pd.concat([s.assign(scenario=n) for n, s in _allocations.items()], ignore_index=True).to_csv(
-        _path, index=False, encoding="utf-8-sig", float_format="%.8f",
-    )
-    output_paths["allocations"] = _path
-    _path = ROOT / f"docs/equity_experiments_{PERIOD}.pdf"
-    equity_figure.savefig(_path, bbox_inches="tight", metadata={"CreationDate": None, "ModDate": None})
-    output_paths["figure"] = _path
-    _svg = StringIO()
-    equity_figure.savefig(_svg, format="svg", bbox_inches="tight", metadata={"Date": None})
-    _sections = {
-        "1 · Distribution of gains and losses": distribution,
-        "1 · Largest increases in municipal mean": impact.nlargest(15, "change_km"),
-        "2 · Municipal protection and controls": comparison,
-        "3 · Efficiency–equity frontier": frontier,
-        "4 · Municipal proximity guarantees": proximity,
+
+    _allocations = {
+        "CAP25"           : cap25    ,
+        "CAP25 protected" : protected,
+
+        **frontier_allocations,
     }
+
+    _path = ROOT / f"results/equity_allocations_{PERIOD}.csv"
+
+    pd.concat(
+        [
+            s.assign(scenario=n)
+            for n, s in _allocations.items()
+        ],
+
+        ignore_index=True,
+    ).to_csv(
+        _path,
+
+        index       =False      ,
+        encoding    ="utf-8-sig",
+        float_format="%.8f"     ,
+    )
+
+    output_paths["allocations"] = _path
+
+    _sections = {
+        "1 · Distribution of gains and losses"    : distribution,
+        "1 · Largest increases in municipal mean" : impact.nlargest(15, "change_km"),
+        "2 · Municipal protection and controls"   : comparison  ,
+        "3 · Efficiency–equity frontier"          : frontier    ,
+    }
+
     _report = ROOT / "reports/equity_analysis.html"
+
     _report.write_text(
         '<!doctype html><html lang="en"><meta charset="utf-8"><title>CAP25 territorial equity</title>'
         '<style>body{font:16px system-ui;margin:2rem;color:#172b3a}section{overflow:auto;margin:2rem 0}'
         'table{border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #ddd;white-space:nowrap}'
-        'svg{width:100%;height:auto}p{max-width:90ch}</style><h1>CAP25 territorial equity</h1>'
+        'p{max-width:90ch}</style><h1>CAP25 territorial equity</h1>'
         '<p>Brazil · January–June 2026. Fixed observed admissions and provider municipalities. '
         'Integer flows; hypothetical capacities floor(1.25 × observed production). '
-        'Efficiency uses rounded km; municipal means and proximity use original decimal km.</p>'
+        'Efficiency uses rounded km; municipal means use original decimal km.</p>'
         '<p>Protection preserves each observed municipal mean. The frontier minimizes the worst municipal mean, '
         'then rounded total travel, within each budget; it does not impose protection. '
-        'Proximity requires ceil(p × demand) nearby admissions in every origin. '
-        'Thresholds are exploratory. Admissions in worsening origins are not identified individual losers. '
+        'Admissions in worsening origins are not identified individual losers. '
         'The analysis does not measure unmet need or universal coverage.</p>'
-        + _svg.getvalue() + "".join(
+        + "".join(
             f"<section><h2>{name}</h2>{table.to_html(index=False, float_format=lambda x: f'{x:.4f}')}</section>"
             for name, table in _sections.items()
-        ) + '</html>', encoding="utf-8",
+        ) + '</html>',
+
+        encoding="utf-8",
     )
+
     output_paths["report"] = _report
+
     _source_paths = [
-        *input_paths, ROOT / "notebooks/08_equity_analysis.py",
-        *sorted((ROOT / "optimization").rglob("*.py")), *sorted((ROOT / "src").glob("*.py")),
+        *input_paths,
+
+        ROOT / "notebooks/08_equity_analysis.py",
+
+        *sorted((ROOT / "optimization").rglob("*.py")),
+        *sorted((ROOT / "src"         ). glob("*.py")),
     ]
+
     _metadata = {
-        "period": PERIOD, "slack": SLACK, "epsilons": EPSILONS,
-        "thresholds_km": THRESHOLDS_KM, "proximity_shares": PROXIMITY_SHARES,
-        "n_admissions": sum(data.demand.values()), "n_origins": len(data.origins),
-        "n_providers": len(data.providers),
-        "total_capacity": sum(TransportScenario(slack=SLACK).capacities(data.observed_supply).values()),
-        "efficiency_cost": "numpy.rint integer km; frontier budgets rounded down",
-        "equity_distance": "original decimal km; municipal proximity counts rounded up",
-        "integral_flows": True, "municipal_tolerance_km": 1e-5,
-        "frontier_objective": "minimax municipal mean, then minimum rounded total distance",
-        "frontier_includes_protection": False,
-        "versions": {p: version(p) for p in ("marimo", "numpy", "pandas", "pyomo", "highspy")},
-        "solver_options": {"threads": 1, "random_seed": 0, "mip_rel_gap": 0, "mip_abs_gap": 0},
-        "unit": "observed admissions, not unique patients or unmet need",
-        "inputs_sha256": {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest() for p in _source_paths},
-        "outputs_sha256": {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest() for p in output_paths.values()},
+        "period"   : PERIOD  ,
+        "slack"    : SLACK   ,
+        "epsilons" : EPSILONS,
+
+        "n_admissions" : sum(data.demand.values()),
+        "n_origins"    : len(data.origins  ),
+        "n_providers"  : len(data.providers),
+
+        "total_capacity" : sum(
+            TransportScenario(slack=SLACK).capacities(data.observed_supply).values()
+        ),
+
+        "inputs_sha256"  : {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest() for p in _source_paths         },
+        "outputs_sha256" : {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest() for p in  output_paths.values()},
     }
+
     _path = ROOT / f"metrics/equity_manifest_{PERIOD}.json"
-    _path.write_text(json.dumps(_metadata, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8")
+
+    _path.write_text(
+        json.dumps(
+            _metadata,
+
+            indent      =2    ,
+            ensure_ascii=False,
+            allow_nan   =False,
+        ) + "\n",
+
+        encoding="utf-8",
+    )
+
     output_paths["manifest"] = _path
     return (output_paths,)
 
 
 @app.cell(hide_code=True)
-def _(
-    comparison,
-    frontier,
-    geographic_floor_km,
-    impact,
-    mo,
-    output_paths,
-    proximity,
-):
+def _(comparison, mo, output_paths):
     _protected = comparison.loc[comparison.scenario.eq("CAP25 protected")].iloc[0]
+
     mo.md(f"""
-    ## FINDINGS AND EXPORTED ARTIFACTS
+    ## EXPORTED ARTIFACTS
 
-    - Published CAP25 worsens the municipal mean in **{impact.outcome.eq('worsened').sum()} origins**.
-    - Municipal protection retains a **{_protected.distance_reduction_pct:.2f}%** reduction in total travel
-      versus observed, at **{_protected.extra_model_distance_vs_cap25_pct:.2f}%** extra rounded travel versus CAP25.
-    - The best frontier worst municipal mean is **{frontier.max_municipal_mean_km.min():.3f} km**;
-      the geographic lower bound is **{geographic_floor_km:.3f} km**.
-    - **{proximity.feasible.sum()} of {len(proximity)}** tested proximity policies are feasible.
-
-    Feasibility and improvements refer to this fixed provider network and the
-    hypothetical CAP25 capacities. They do not establish actual service readiness,
-    absence of waiting lists, clinical equivalence or population coverage.
-
-    """ + "\n".join(f"- `{p.name}`" for p in output_paths.values()))
-    return
-
-
-@app.cell
-def _():
+    """ + "\n".join(f"- `{p.name}`" for p in output_paths.values())
+    )
     return
 
 
