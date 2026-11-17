@@ -409,7 +409,7 @@ def _(
             ),
         })
 
-        frontier_allocations[_name] = _solution
+        frontier_allocations[float(_epsilon)] = _solution
 
     frontier = pd.DataFrame(_rows)[
         [
@@ -449,7 +449,6 @@ def _(
     ROOT,
     SLACK,
     TransportScenario,
-    cap25,
     comparison,
     data,
     distribution,
@@ -484,30 +483,31 @@ def _(
         output_paths[_name] = _path
 
     _allocations = {
-        "CAP25"           : cap25    ,
-        "CAP25 protected" : protected,
+        "protected" : protected,
+        "frontier"  : pd.concat(
+            [
+                solution.assign(epsilon=epsilon)
+                for epsilon, solution in frontier_allocations.items()
+            ],
 
-        **frontier_allocations,
+            ignore_index=True,
+        ),
     }
 
-    _path = ROOT / f"results/equity_allocations_{PERIOD}.csv"
+    for _name, _solution in _allocations.items():
+        _path = ROOT / f"results/equity_{_name}_{PERIOD}.csv"
 
-    pd.concat(
-        [
-            s.assign(scenario=n)
-            for n, s in _allocations.items()
-        ],
+        _solution.drop(
+            columns=["same_municipality", "model_distance_km"],
+        ).to_csv(
+            _path,
 
-        ignore_index=True,
-    ).to_csv(
-        _path,
+            index       =False      ,
+            encoding    ="utf-8-sig",
+            float_format="%.2f"     ,
+        )
 
-        index       =False      ,
-        encoding    ="utf-8-sig",
-        float_format="%.8f"     ,
-    )
-
-    output_paths["allocations"] = _path
+        output_paths[f"{_name}_allocations"] = _path
 
     _sections = {
         "1 · Distribution of gains and losses"    : distribution,
@@ -515,30 +515,6 @@ def _(
         "2 · Municipal protection and controls"   : comparison  ,
         "3 · Efficiency–equity frontier"          : frontier    ,
     }
-
-    _report = ROOT / "reports/equity_analysis.html"
-
-    _report.write_text(
-        '<!doctype html><html lang="en"><meta charset="utf-8"><title>CAP25 territorial equity</title>'
-        '<style>body{font:16px system-ui;margin:2rem;color:#172b3a}section{overflow:auto;margin:2rem 0}'
-        'table{border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #ddd;white-space:nowrap}'
-        'p{max-width:90ch}</style><h1>CAP25 territorial equity</h1>'
-        '<p>Brazil · January–June 2026. Fixed observed admissions and provider municipalities. '
-        'Integer flows; hypothetical capacities floor(1.25 × observed production). '
-        'Efficiency uses rounded km; municipal means use original decimal km.</p>'
-        '<p>Protection preserves each observed municipal mean. The frontier minimizes the worst municipal mean, '
-        'then rounded total travel, within each budget; it does not impose protection. '
-        'Admissions in worsening origins are not identified individual losers. '
-        'The analysis does not measure unmet need or universal coverage.</p>'
-        + "".join(
-            f"<section><h2>{name}</h2>{table.to_html(index=False, float_format=lambda x: f'{x:.4f}')}</section>"
-            for name, table in _sections.items()
-        ) + '</html>',
-
-        encoding="utf-8",
-    )
-
-    output_paths["report"] = _report
 
     _source_paths = [
         *input_paths,
