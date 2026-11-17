@@ -1,6 +1,6 @@
 """Territorial equity experiments with fixed observed demand and CAP capacities"""
 
-from decimal import Decimal, ROUND_CEILING
+from decimal import Decimal
 
 import numpy         as np
 import pandas        as pd
@@ -137,8 +137,6 @@ def solve_equity(
     protection=None ,
     budget    =None ,
     minimax   =False,
-    threshold =None ,
-    share     =None ,
 ):
     """
     Solve integer extensions; minimax uses decimal km and a distance tie-break.
@@ -147,52 +145,16 @@ def solve_equity(
     use the original model's rounded integer km. Infeasibility is a result.
     """
 
-    if (threshold is None) != (share is None):
-        raise ValueError("Proximity requires both threshold and share.")
-
-    if threshold is not None and (threshold < 0 or not 0 <= share <= 1):
-        raise ValueError("Invalid proximity threshold/share.")
-
     if budget is not None and (budget < 0 or int(budget) != budget):
         raise ValueError("The rounded-distance budget must be a nonnegative integer.")
 
     scenario = TransportScenario(slack=slack)
     costs    = distances.to_dict()
 
-    nearby, required = {}, {}
-
     row = {
-        "feasible"        : False,
-        "termination"     : ""   ,
-        "blocked_origins" : ""   ,
+        "feasible"    : False,
+        "termination" : ""   ,
     }
-
-    if threshold is not None:
-        for i in data.origins:
-            nearby  [i] = [
-                j
-                for j in data.destinations_by_origin[i]
-                if  costs[i, j] <= threshold
-            ]
-
-            required[i] = int(
-                (Decimal(str(share)) * data.demand[i]).to_integral_value(rounding=ROUND_CEILING)
-            )
-
-        capacity = scenario.capacities(data.observed_supply)
-        blocked  = [
-            i
-            for i in data.origins
-            if sum(capacity[j] for j in nearby[i]) < required[i]
-        ]
-
-        if blocked:
-            row.update(
-                termination    ="infeasible_origin_proximity",
-                blocked_origins=";".join(blocked)            ,
-            )
-
-            return None, row
 
     model = build_transport_model(data, scenario)
 
@@ -245,17 +207,6 @@ def solve_equity(
         model.protection = pyo.Constraint(model.I, rule=lambda m, i: travel[i] <= float(protection[i]))
     if budget is not None:
         model.budget     = pyo.Constraint(expr=model.total_distance.expr <= budget)
-    if threshold is not None:
-        model.proximity  = pyo.Constraint(
-            model.I,
-
-            rule=(
-                lambda m, i: pyo.quicksum(m.x[i, j] for j in nearby[i]) >= required[i]
-                if nearby[i]
-                else pyo.Constraint.Feasible
-            ),
-        )
-
     if minimax:
         lower_bound = max(
             min(
@@ -329,18 +280,6 @@ def solve_equity(
 
     if minimax and row["max_municipal_mean_km"] > optimum + 2 * TOLERANCE:
         raise RuntimeError("Equity tie-break lost the minimax optimum.")
-
-    if threshold is not None:
-        near = solution.loc[
-            solution.distance_km.le(threshold)
-        ].groupby("origin_code").allocated_flow.sum()
-
-        counts = near.reindex(data.origins, fill_value=0)
-
-        if (counts < pd.Series(required)).any():
-            raise RuntimeError("Municipal proximity guarantee failed.")
-
-        row["min_municipal_proximity_share"] = float((counts / pd.Series(data.demand)).min())
 
     return solution, row
 
