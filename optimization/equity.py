@@ -110,8 +110,15 @@ def summarize_origins(impact, by=None):
 
         rows.append(row)
 
-    return pd.DataFrame(rows)
+    result = pd.DataFrame(rows)
 
+    result[
+        result.select_dtypes(include="float").columns
+    ] = (
+        result.select_dtypes(include="float").round(2)
+    )
+
+    return result
 
 def distance_budget(reference_cost, epsilon):
     if epsilon < 0:
@@ -335,7 +342,14 @@ def solve_equity(
 
         row["min_municipal_proximity_share"] = float((counts / pd.Series(data.demand)).min())
 
-    return solution, row
+    return solution, {
+        k : (
+            round(v, 2)
+            if   isinstance(v, (float, np.floating))
+            else v
+        )
+        for k, v in row.items()
+    }
 
 
 def scenario_metrics(name, solution, observed, municipal, audit=None):
@@ -350,10 +364,6 @@ def scenario_metrics(name, solution, observed, municipal, audit=None):
     return {
         "scenario" : name,
         "feasible" : True,
-
-        "model_objective_km" : int(
-            (solution.model_distance_km * solution.allocated_flow).sum()
-        ),
 
         **flow_metrics(solution, float(observed.total_distance_km.sum())),
 
