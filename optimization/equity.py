@@ -342,14 +342,7 @@ def solve_equity(
 
         row["min_municipal_proximity_share"] = float((counts / pd.Series(data.demand)).min())
 
-    return solution, {
-        k : (
-            round(v, 2)
-            if   isinstance(v, (float, np.floating))
-            else v
-        )
-        for k, v in row.items()
-    }
+    return solution, row
 
 
 def scenario_metrics(name, solution, observed, municipal, audit=None):
@@ -361,7 +354,7 @@ def scenario_metrics(name, solution, observed, municipal, audit=None):
 
     summary = summarize_origins(impact).iloc[0].to_dict()
 
-    return {
+    result = {
         "scenario" : name,
         "feasible" : True,
 
@@ -376,4 +369,14 @@ def scenario_metrics(name, solution, observed, municipal, audit=None):
         "max_municipal_mean_km" : float(impact.scenario_mean_km.max()),
 
         **(audit or {}),
+    }
+
+    return {
+        k : (
+            round(v, 2)
+            if   isinstance(v, (float, np.floating))
+            else v
+        )
+
+        for k, v in result.items()
     }
