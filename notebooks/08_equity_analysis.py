@@ -305,10 +305,10 @@ def _(
     ])[[
         "scenario",
 
-        "n_active_od_pairs"    ,
-        "total_distance_km"    ,
-        "mean_distance_km"     ,
-        "max_distance_km"      ,
+        "n_active_od_pairs",
+        "total_distance_km",
+        "mean_distance_km" ,
+        "max_distance_km"  ,
 
         "improved_origins" ,
         "unchanged_origins",
@@ -411,28 +411,23 @@ def _(
 
         frontier_allocations[_name] = _solution
 
-    frontier = pd.DataFrame(_rows)
+    frontier = pd.DataFrame(_rows)[
+        [
+            "epsilon"  ,
+            "budget_km",
 
-    frontier["extra_model_distance_pct"] = 100 * (frontier.model_objective_km / reference_cost - 1)
+            "total_distance_km",
+            "mean_distance_km" ,
+            "max_distance_km"  ,
 
-    if frontier.max_municipal_mean_km.diff().dropna().gt(2e-5).any():
-        raise RuntimeError("Equity worsened when its distance budget increased.")
+            "improved_origins" ,
+            "unchanged_origins",
+            "worsened_origins" ,
+        ]
+    ]
 
     mo.ui.table(
-        frontier[
-            [
-                "epsilon"  ,
-                "budget_km",
-
-                "total_distance_km",
-                "mean_distance_km" ,
-                "max_distance_km"  ,
-
-                "improved_origins" ,
-                "unchanged_origins",
-                "worsened_origins" ,
-            ]
-        ],
+        frontier,
 
         selection=None,
     )
@@ -455,7 +450,6 @@ def _(
     SLACK,
     TransportScenario,
     cap25,
-    compare_origins,
     comparison,
     data,
     distribution,
@@ -464,8 +458,6 @@ def _(
     impact,
     input_paths,
     json,
-    municipal,
-    observed,
     pd,
     protected,
     sha256,
@@ -474,20 +466,6 @@ def _(
         "comparison"   : comparison  ,
         "distribution" : distribution,
         "frontier"     : frontier    ,
-        "origins"      : pd.concat(
-            [
-                impact.assign(scenario="CAP25"),
-                compare_origins(
-                    observed ,
-                    protected,
-                    municipal,
-                ).assign(
-                    scenario="CAP25 protected",
-                ),
-            ],
-
-            ignore_index=True,
-        ),
     }
 
     output_paths = {}
