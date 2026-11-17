@@ -498,7 +498,10 @@ def _(
         _path = ROOT / f"results/equity_{_name}_{PERIOD}.csv"
 
         _solution.drop(
-            columns=["same_municipality", "model_distance_km"],
+            columns=[
+                "same_municipality",
+                "model_distance_km",
+            ],
         ).to_csv(
             _path,
 
@@ -516,30 +519,21 @@ def _(
         "3 · Efficiency–equity frontier"          : frontier    ,
     }
 
-    _source_paths = [
-        *input_paths,
-
-        ROOT / "notebooks/08_equity_analysis.py",
-
-        *sorted((ROOT / "optimization").rglob("*.py")),
-        *sorted((ROOT / "src"         ). glob("*.py")),
-    ]
-
     _metadata = {
         "period"   : PERIOD  ,
         "slack"    : SLACK   ,
         "epsilons" : EPSILONS,
 
         "n_admissions" : sum(data.demand.values()),
-        "n_origins"    : len(data.origins  ),
-        "n_providers"  : len(data.providers),
+        "n_origins"    : len(data.origins        ),
+        "n_providers"  : len(data.providers      ),
 
         "total_capacity" : sum(
             TransportScenario(slack=SLACK).capacities(data.observed_supply).values()
         ),
 
-        "inputs_sha256"  : {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest() for p in _source_paths         },
-        "outputs_sha256" : {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest() for p in  output_paths.values()},
+        "inputs_sha256"  : {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest() for p in input_paths          },
+        "outputs_sha256" : {str(p.relative_to(ROOT)): sha256(p.read_bytes()).hexdigest() for p in output_paths.values()},
     }
 
     _path = ROOT / f"metrics/equity_manifest_{PERIOD}.json"
