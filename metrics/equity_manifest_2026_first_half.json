@@ -1,0 +1,49 @@
+{
+  "period": "2026_first_half",
+  "slack": 0.25,
+  "epsilons": [
+    0,
+    0.01,
+    0.02,
+    0.05,
+    0.1
+  ],
+  "n_admissions": 1734,
+  "n_origins": 784,
+  "n_providers": 158,
+  "total_capacity": 2111,
+  "inputs_sha256": {
+    "data/origin_destination_data_2026_first_half.csv": "0c69821cc3597f769565b709f0786b864136a290bc05ac7e5dda66de5e4d5b84",
+    "data/municipal_data_2026_first_half.csv": "a2a7d47016fbcf9526363099bf22de3d3fa1656c1330ed79cc12b22e4d6cd146",
+    "results/scenario_2_capacity_constrained_2026_first_half.csv": "fb6673a6c7090980bb5439fd317bc160f5c1c4ed937b8bb501c5c00f48b847ee",
+    "notebooks/08_equity_analysis.py": "7b34d3317ccb40a5b5aeebd5bf95991828e6f12f92e71795ab280c4277214b85",
+    "optimization/__init__.py": "b04b57f6e183e31f346deb0900aced5e44633ca178e65bc7a46b3d5d04113ef2",
+    "optimization/data.py": "1e2dd34b043d6579dfd727877fc009121c6a7b4c4ecd8dc651389eeff9f6f7e6",
+    "optimization/equity.py": "510dbb23127d2bdd343e7aa67ac91be2f7464dc1c59c6037ed3977ddc5428017",
+    "optimization/history.py": "928a9851211d60897ce6fb81dd600ede3ebff01d3e77664a5de57550cbf796f9",
+    "optimization/metrics.py": "71b52927b3e81da82b21f2fbcc9f6ca3852a61e713767cbda81796b4320c3866",
+    "optimization/models/__init__.py": "7c63ed387fe0cf891d7a0ae48a424fb775a67b20e91aeed36e4b5b669f1d87ff",
+    "optimization/models/transport.py": "dd4d51b9a4b5443a306a447a3d8e181a505053b519fc811d7ed17fd425fb830f",
+    "optimization/scenarios.py": "42e27b891f213bc3830acbf019684f75cedffe4cd40b7fe65339ec9b5bd5a604",
+    "optimization/solve.py": "c29459b6ba6ec71b024bc329ff93333a823c52d7176cc1a342bc92313c7bbb8f",
+    "optimization/validation.py": "0351251573cfa3fd2e4eb5ff0be0a50ceadb3d5bf31b5d7b1a73c7fd66f80191",
+    "src/analysis.py": "925d785e20ab15cb1ea0e5b45fa47968d061e2aa3909a72fb140f3fd05963fe7",
+    "src/carbon.py": "8f7e9098bb7180a16784d0bbac6a3718cbb64b77b4e11d9f74b1a5620db766a7",
+    "src/datasus.py": "e149726e42b7d598765b5ea47ff85f33eb774cc7bf7732a02ed24a2b81055dd8",
+    "src/distances.py": "dc48413296a7138ecbf8f004cd2b9cec37d7f09a8dd1e7c8df70a505c7f98605",
+    "src/history.py": "15936830fdc034d59d4eda83324c94b70d82ad0f4f78a3d03acf1a3d1ccc71d4",
+    "src/municipal.py": "56b0975493ef49bd2879339ab3de6f8dd7889e4c81a291e0704201c959c6f895",
+    "src/quantiles.py": "1031e26077ec8f39e2ec92e73df7e2cdbf293aaa02f451d578c5a4c1186f26ea",
+    "src/reallocation.py": "d58de49057c8b14dbe83144233476abb18d1f7f9f6f58997a282b3fdaf4cbeb6",
+    "src/routes.py": "2312f3e253828026846b10a32a3b34139e5b430f946a3fc3d4fcca3489edb92c",
+    "src/sih.py": "64920f5bf19ab6f79ed2ac07308b6e4823217b0f240232c0336923aa70aebf0b",
+    "src/visualization.py": "7809c030c8e4d2805b45c873456e8aa67b43c8807097cb3cc4cbbf75f0e9712f"
+  },
+  "outputs_sha256": {
+    "metrics/equity_comparison_2026_first_half.csv": "aec0ac6e0182fd4c1aed75aea72cad67e1989e19c800584ecb32a2215017d415",
+    "metrics/equity_distribution_2026_first_half.csv": "2b8f6bcf2d15559bf65615118e3d2d08d3af73389eaf50a413e110e6ed1586cd",
+    "metrics/equity_frontier_2026_first_half.csv": "36c80784690266ff0a13e181fc5219a8dcc201fcf03be8cbcb05a2faa86a8f2b",
+    "results/equity_allocations_2026_first_half.csv": "a584367e57b94c0f8bbcbb0843dcd8216c38c5f9e5978d79d35a1bad0fa462a3",
+    "reports/equity_analysis.html": "7c273237670fe08d5f63020d3823e9fe67f434171cd4e36b537601d69635e979"
+  }
+}
