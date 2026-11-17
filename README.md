@@ -15,7 +15,8 @@ SIH/SUS data processing selects procedure `0416010121`, regular hospital admissi
 | [05 — Nearest Provider](notebooks/05_nearest_provider_reallocation.py) | Scenario 1: reallocate demand without capacity constraints. |
 | [06 — Capacity Constraint](notebooks/06_capacity_constrained_reallocation.py) | Scenario 2: minimize travel under hypothetical capacity expansion. |
 | [07 — Interstate Limit](notebooks/07_capacity_constrained_reallocation_with_interstate_limit.py) | Scenario 3: limit admissions outside the state of residence. |
-| [08 — Historical Analysis](notebooks/08_historical_flow_analysis.py) | Compare annual scenarios and estimate potential transport emissions. |
+| [08 — Equity Analysis](notebooks/08_equity_analysis.py) | Compare CAP25 gains/losses and the efficiency–equity frontier. |
+| [09 — Historical Analysis](notebooks/09_historical_flow_analysis.py) | Compare annual scenarios and estimate potential transport emissions. |
 
 > **Note**.: Distances use the Saldanha matrix and its May 2024 reference network, including in the historical analysis. Travel within a municipality is assigned zero distance.
 
