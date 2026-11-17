@@ -1,0 +1,5 @@
+﻿scenario,n_active_od_pairs,total_distance_km,mean_distance_km,max_distance_km,improved_origins,unchanged_origins,worsened_origins
+Observed,826,104287.03,60.14,2179.91,0,784,0
+CAP0,807,97460.16,56.21,1619.39,111,599,74
+CAP25,803,86895.50,50.11,991.97,173,577,34
+CAP25 protected,817,87612.82,50.53,991.97,160,624,0
